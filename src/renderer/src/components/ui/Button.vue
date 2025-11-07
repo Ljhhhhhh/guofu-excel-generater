@@ -42,4 +42,3 @@ const sizeClasses = {
     <slot></slot>
   </button>
 </template>
-

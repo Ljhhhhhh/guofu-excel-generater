@@ -69,10 +69,7 @@ const triggerFileSelect = () => {
       {{ label }}
     </label>
     <div
-      class="
-        relative border-2 border-dashed rounded-lg p-8 text-center
-        transition-colors duration-200 cursor-pointer
-      "
+      class="relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 cursor-pointer"
       :class="{
         'border-blue-500 bg-blue-50': isDragging,
         'border-gray-300 hover:border-gray-400': !isDragging
@@ -121,4 +118,3 @@ const triggerFileSelect = () => {
     </div>
   </div>
 </template>
-

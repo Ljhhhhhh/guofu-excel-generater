@@ -125,11 +125,7 @@ const handleGenerate = (data: any) => {
             </div>
 
             <div v-else class="space-y-4">
-              <Card
-                v-for="contract in contractStore.contracts"
-                :key="contract.id"
-                :padding="false"
-              >
+              <Card v-for="contract in contractStore.contracts" :key="contract.id" :padding="false">
                 <div class="p-6">
                   <!-- 契约标题 -->
                   <div class="flex items-start justify-between">
@@ -177,9 +173,7 @@ const handleGenerate = (data: any) => {
                     </div>
 
                     <div
-                      v-if="
-                        contract.bindings.filter((b) => b.type === 'parameter').length > 0
-                      "
+                      v-if="contract.bindings.filter((b) => b.type === 'parameter').length > 0"
                       class="text-sm text-gray-600"
                     >
                       <span class="font-medium">需要参数：</span>
@@ -258,4 +252,3 @@ const handleGenerate = (data: any) => {
     />
   </div>
 </template>
-

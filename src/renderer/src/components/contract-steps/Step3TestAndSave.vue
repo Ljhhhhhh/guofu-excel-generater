@@ -21,12 +21,12 @@ const draft = computed(() => contractStore.contractDraft)
 
 // 参数定义
 const parameters = computed(() => {
-  return draft.value?.bindings.filter(b => b.type === 'parameter') || []
+  return draft.value?.bindings.filter((b) => b.type === 'parameter') || []
 })
 
 // 运行时参数值
 const parameterValues = ref<RuntimeParameterValue[]>(
-  parameters.value.map(p => {
+  parameters.value.map((p) => {
     if (p.type !== 'parameter') return { mark: '', value: '' }
     return {
       mark: p.mark,
@@ -37,7 +37,7 @@ const parameterValues = ref<RuntimeParameterValue[]>(
 
 // 数据源文件
 const dataSourceFiles = ref<RuntimeDataSourceFile[]>(
-  draft.value?.dataSources.map(ds => ({
+  draft.value?.dataSources.map((ds) => ({
     dataSourceId: ds.id,
     dataSourceName: ds.name,
     file: null
@@ -46,7 +46,7 @@ const dataSourceFiles = ref<RuntimeDataSourceFile[]>(
 
 // 是否可以运行测试
 const canRunTest = computed(() => {
-  return dataSourceFiles.value.every(df => df.file !== null)
+  return dataSourceFiles.value.every((df) => df.file !== null)
 })
 
 const isTestRunning = ref(false)
@@ -62,7 +62,7 @@ const handleRunTest = async () => {
 
   // 模拟测试执行
   // 实际实现: const result = await window.api.testContract(...)
-  await new Promise(resolve => setTimeout(resolve, 2000))
+  await new Promise((resolve) => setTimeout(resolve, 2000))
 
   // 模拟成功
   isTestRunning.value = false
@@ -71,7 +71,7 @@ const handleRunTest = async () => {
 
 // 文件上传处理
 const handleFileUpload = (dataSourceId: string, file: File) => {
-  const dsFile = dataSourceFiles.value.find(df => df.dataSourceId === dataSourceId)
+  const dsFile = dataSourceFiles.value.find((df) => df.dataSourceId === dataSourceId)
   if (dsFile) {
     dsFile.file = file
   }
@@ -101,8 +101,7 @@ const handleSave = () => {
       <div class="space-y-6">
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p class="text-sm text-blue-800">
-            在保存之前，建议先运行测试以确保所有配置正确无误。
-            系统会模拟"运行报表"的场景。
+            在保存之前，建议先运行测试以确保所有配置正确无误。 系统会模拟"运行报表"的场景。
           </p>
         </div>
 
@@ -111,17 +110,15 @@ const handleSave = () => {
           <div class="border-b border-gray-200 pb-2">
             <h4 class="text-lg font-semibold text-gray-900">1. 参数输入</h4>
           </div>
-          
-          <div
-            v-for="(param, index) in parameters"
-            :key="param.mark"
-            class="space-y-2"
-          >
+
+          <div v-for="(param, index) in parameters" :key="param.mark" class="space-y-2">
             <Input
               v-if="param.type === 'parameter'"
               v-model="parameterValues[index].value"
               :label="param.displayLabel"
-              :type="param.dataType === 'number' ? 'number' : param.dataType === 'date' ? 'date' : 'text'"
+              :type="
+                param.dataType === 'number' ? 'number' : param.dataType === 'date' ? 'date' : 'text'
+              "
               :placeholder="param.defaultValue ? `默认值: ${param.defaultValue}` : ''"
             />
           </div>
@@ -135,11 +132,7 @@ const handleSave = () => {
             </h4>
           </div>
 
-          <div
-            v-for="dsFile in dataSourceFiles"
-            :key="dsFile.dataSourceId"
-            class="space-y-2"
-          >
+          <div v-for="dsFile in dataSourceFiles" :key="dsFile.dataSourceId" class="space-y-2">
             <FileUpload
               :label="dsFile.dataSourceName"
               @upload="(file) => handleFileUpload(dsFile.dataSourceId, file as File)"
@@ -190,12 +183,13 @@ const handleSave = () => {
         </div>
 
         <!-- 测试成功预览 -->
-        <div v-if="testResult === 'success'" class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div
+          v-if="testResult === 'success'"
+          class="bg-green-50 border border-green-200 rounded-lg p-4"
+        >
           <p class="text-sm text-green-800 mb-2 font-medium">预览结果：</p>
           <div class="bg-white rounded border border-green-300 p-4">
-            <p class="text-sm text-gray-600">
-              报表生成成功！（这里会显示生成的报表预览）
-            </p>
+            <p class="text-sm text-gray-600">报表生成成功！（这里会显示生成的报表预览）</p>
           </div>
         </div>
       </div>
@@ -204,17 +198,10 @@ const handleSave = () => {
     <!-- 保存契约 -->
     <Card title="保存报表契约">
       <div class="space-y-4">
-        <Input
-          v-model="contractName"
-          label="契约名称"
-          placeholder="例如: 每周销售报表"
-          required
-        />
+        <Input v-model="contractName" label="契约名称" placeholder="例如: 每周销售报表" required />
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            契约描述（可选）
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-1"> 契约描述（可选） </label>
           <textarea
             v-model="contractDescription"
             rows="3"
@@ -224,19 +211,10 @@ const handleSave = () => {
         </div>
 
         <div class="flex justify-between pt-4">
-          <Button variant="outline" @click="emit('prev')">
-            上一步
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            @click="handleSave"
-          >
-            保存报表契约
-          </Button>
+          <Button variant="outline" @click="emit('prev')"> 上一步 </Button>
+          <Button variant="primary" size="lg" @click="handleSave"> 保存报表契约 </Button>
         </div>
       </div>
     </Card>
   </div>
 </template>
-

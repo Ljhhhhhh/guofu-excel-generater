@@ -11,7 +11,7 @@ onMounted(() => {
   const contractId = route.params.id as string
   const getContract = contractStore.getContractById
   const contract = getContract(contractId)
-  
+
   if (contract) {
     // 加载现有契约到草稿
     contractStore.createNewDraft(
@@ -26,4 +26,3 @@ onMounted(() => {
 <template>
   <CreateContract />
 </template>
-

@@ -25,14 +25,17 @@
 ## 项目概述
 
 ### 核心定位
+
 **国富 Excel 工具** 是一个基于 Electron 的桌面应用程序，专注于 **模板驱动的报表生成**。
 
 ### 核心哲学
+
 - **模板即配置**：系统以 Excel 模板为唯一事实来源
 - **设计与运行分离**：创建"报表契约"（配置）与执行报表生成完全解耦
 - **零编码使用**：用户通过 GUI 配置数据绑定，无需编写代码
 
 ### 业务流程
+
 1. **设计阶段**：上传模板 → 解析 Carbone 标记 → 配置数据绑定 → 保存"报表契约"
 2. **运行阶段**：选择契约 → 输入参数 → 上传数据 → 生成报表
 
@@ -43,6 +46,7 @@
 ## 技术栈架构
 
 ### 运行环境
+
 ```
 Electron 38.x
 ├── Chromium (渲染进程 - 前端)
@@ -51,24 +55,27 @@ Electron 38.x
 ```
 
 ### 前端技术栈
-| 技术           | 版本  | 用途                          |
-| -------------- | ----- | ----------------------------- |
-| **Vue**        | 3.5   | 渐进式 UI 框架（组合式 API）  |
-| **Vite**       | 7.x   | 构建工具 + 开发服务器         |
-| **TypeScript** | 5.9   | 类型安全                      |
-| **Tailwind CSS** | 4.x   | 实用优先的 CSS 框架           |
-| **Pinia**      | 最新  | Vue 官方状态管理库            |
-| **Vue Router** | 最新  | 单页应用路由                  |
+
+| 技术             | 版本 | 用途                         |
+| ---------------- | ---- | ---------------------------- |
+| **Vue**          | 3.5  | 渐进式 UI 框架（组合式 API） |
+| **Vite**         | 7.x  | 构建工具 + 开发服务器        |
+| **TypeScript**   | 5.9  | 类型安全                     |
+| **Tailwind CSS** | 4.x  | 实用优先的 CSS 框架          |
+| **Pinia**        | 最新 | Vue 官方状态管理库           |
+| **Vue Router**   | 最新 | 单页应用路由                 |
 
 ### 后端技术栈
-| 技术       | 用途                                      |
-| ---------- | ----------------------------------------- |
-| **Node.js** | Electron 主进程运行环境                   |
-| **execa**   | 更好的子进程执行库（替代 child_process）  |
+
+| 技术        | 用途                                           |
+| ----------- | ---------------------------------------------- |
+| **Node.js** | Electron 主进程运行环境                        |
+| **execa**   | 更好的子进程执行库（替代 child_process）       |
 | **carbone** | 报表模板引擎（支持 `{{d.}}` 和 `{{v.}}` 标记） |
-| **exceljs** | Excel 文件读写和操作                      |
+| **exceljs** | Excel 文件读写和操作                           |
 
 ### 构建工具
+
 ```
 electron-vite 4.x
 ├── 主进程构建 (Rollup + esbuild)
@@ -81,6 +88,7 @@ electron-vite 4.x
 ## 项目结构
 
 ### 标准 electron-vite 项目结构
+
 ```
 guofu-excel-tool/
 ├── src/
@@ -123,6 +131,7 @@ guofu-excel-tool/
 ### 关键目录职责
 
 #### `src/main/`（主进程）
+
 - **职责**：
   - 创建和管理 BrowserWindow
   - 处理文件系统操作（读写 Excel）
@@ -134,6 +143,7 @@ guofu-excel-tool/
 - **构建目标**：CommonJS（默认）或 ESM
 
 #### `src/preload/`（预加载脚本）
+
 - **职责**：
   - 通过 `contextBridge` 暴露安全的 API 到渲染进程
   - 封装 `ipcRenderer` 调用
@@ -141,6 +151,7 @@ guofu-excel-tool/
 - **安全**：**必须**启用 `contextIsolation: true`
 
 #### `src/renderer/`（渲染进程）
+
 - **职责**：
   - 用户界面（Vue 组件）
   - 状态管理（Pinia）
@@ -154,6 +165,7 @@ guofu-excel-tool/
 ## 核心配置文件
 
 ### `electron.vite.config.ts`
+
 electron-vite 的**中心化配置**，管理三个进程的构建选项。
 
 ```typescript
@@ -210,23 +222,24 @@ export default defineConfig({
 ```
 
 **关键配置项**：
+
 - `externalizeDepsPlugin()`: 防止 Node.js 模块（如 `exceljs`, `carbone`）被打包
 - `rollupOptions.input`: 指定入口文件
 - `resolve.alias`: 路径别名（如 `@renderer`）
 
 ### `tsconfig.json`（根配置）
+
 ```json
 {
   "files": [],
-  "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.web.json" }
-  ]
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
 }
 ```
+
 使用 **TypeScript Project References** 进行多项目管理。
 
 ### `tsconfig.node.json`（主进程 + 预加载）
+
 ```json
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
@@ -240,6 +253,7 @@ export default defineConfig({
 ```
 
 ### `tsconfig.web.json`（渲染进程）
+
 ```json
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
@@ -256,15 +270,16 @@ export default defineConfig({
 ```
 
 ### `package.json` 脚本
+
 ```json
 {
   "scripts": {
-    "dev": "electron-vite dev",              // 开发模式：HMR + 主进程热重启
+    "dev": "electron-vite dev", // 开发模式：HMR + 主进程热重启
     "build": "npm run typecheck && electron-vite build", // 生产构建
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
-    "preview": "electron-vite preview",      // 预览生产构建
+    "preview": "electron-vite preview", // 预览生产构建
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux"
@@ -277,6 +292,7 @@ export default defineConfig({
 ## 开发工作流
 
 ### 启动开发服务器
+
 ```bash
 npm run dev
 # 或
@@ -284,23 +300,30 @@ pnpm dev
 ```
 
 **效果**：
+
 - 渲染进程：Vite 开发服务器（HMR，通常 `http://localhost:5173`）
 - 主进程：自动监听文件变化并重启
 - 预加载脚本：自动重新编译并刷新窗口
 
 ### 类型检查
+
 ```bash
 npm run typecheck
 ```
+
 **何时运行**：
+
 - 提交代码前
 - CI/CD 流水线
 
 ### 构建生产版本
+
 ```bash
 npm run build
 ```
+
 输出到 `out/` 目录：
+
 ```
 out/
 ├── main/
@@ -313,6 +336,7 @@ out/
 ```
 
 ### 打包为可分发应用
+
 ```bash
 # Windows 安装包
 npm run build:win
@@ -331,6 +355,7 @@ npm run build:linux
 ### TypeScript 规范
 
 #### 1. 严格类型定义
+
 ```typescript
 // ✅ 好的做法
 interface ReportContract {
@@ -346,12 +371,14 @@ function loadContract(id: string): Promise<ReportContract> {
 }
 
 // ❌ 避免 any
-function processData(data: any) { // 不好
+function processData(data: any) {
+  // 不好
   // ...
 }
 ```
 
 #### 2. 使用类型别名提高可读性
+
 ```typescript
 type CellCoordinate = `${string}!${string}` // 例如："Sheet1!E5"
 type CarboneMark = `d.${string}` | `v.${string}`
@@ -364,6 +391,7 @@ interface DataBinding {
 ```
 
 #### 3. 利用 Discriminated Unions
+
 ```typescript
 type MarkType =
   | { type: 'single'; mark: string; coordinate: CellCoordinate }
@@ -385,6 +413,7 @@ function processMarkType(mark: MarkType) {
 ### Vue 3 组合式 API 规范
 
 #### 1. 组件结构顺序
+
 ```vue
 <script setup lang="ts">
 // 1. 导入
@@ -416,7 +445,7 @@ const isLoading = ref(false)
 
 // 5. 计算属性
 const isValid = computed(() => {
-  return contract.value?.dataSources.every(ds => ds.configured) ?? false
+  return contract.value?.dataSources.every((ds) => ds.configured) ?? false
 })
 
 // 6. 方法
@@ -434,9 +463,12 @@ onMounted(async () => {
 })
 
 // 8. 监听器
-watch(() => props.contractId, (newId) => {
-  // 重新加载契约
-})
+watch(
+  () => props.contractId,
+  (newId) => {
+    // 重新加载契约
+  }
+)
 </script>
 
 <template>
@@ -449,6 +481,7 @@ watch(() => props.contractId, (newId) => {
 ```
 
 #### 2. 组合式函数（Composables）
+
 ```typescript
 // src/renderer/src/composables/useFileUpload.ts
 import { ref } from 'vue'
@@ -491,6 +524,7 @@ export function useFileUpload() {
 ```
 
 #### 3. Pinia Store 模式
+
 ```typescript
 // src/renderer/src/stores/report.ts
 import { defineStore } from 'pinia'
@@ -505,7 +539,7 @@ export const useReportStore = defineStore('report', () => {
   const contractCount = computed(() => contracts.value.length)
 
   const getContractById = computed(() => {
-    return (id: string) => contracts.value.find(c => c.id === id)
+    return (id: string) => contracts.value.find((c) => c.id === id)
   })
 
   // 动作
@@ -516,7 +550,7 @@ export const useReportStore = defineStore('report', () => {
 
   async function saveContract(contract: ReportContract) {
     await window.electron.saveContract(contract)
-    const index = contracts.value.findIndex(c => c.id === contract.id)
+    const index = contracts.value.findIndex((c) => c.id === contract.id)
     if (index !== -1) {
       contracts.value[index] = contract
     } else {
@@ -526,7 +560,7 @@ export const useReportStore = defineStore('report', () => {
 
   async function deleteContract(id: string) {
     await window.electron.deleteContract(id)
-    const index = contracts.value.findIndex(c => c.id === id)
+    const index = contracts.value.findIndex((c) => c.id === id)
     if (index !== -1) {
       contracts.value.splice(index, 1)
     }
@@ -550,6 +584,7 @@ export const useReportStore = defineStore('report', () => {
 ### Tailwind CSS 使用规范
 
 #### 1. 实用类组织顺序
+
 ```vue
 <template>
   <!-- 推荐顺序：布局 → 间距 → 尺寸 → 排版 → 视觉 → 交互 -->
@@ -570,6 +605,7 @@ export const useReportStore = defineStore('report', () => {
 ```
 
 #### 2. 使用 `@apply` 提取重复模式
+
 ```vue
 <style scoped>
 .btn-primary {
@@ -590,20 +626,25 @@ export const useReportStore = defineStore('report', () => {
 ```
 
 #### 3. 响应式设计
+
 ```vue
 <template>
   <!-- 移动优先 -->
-  <div class="
+  <div
+    class="
     grid grid-cols-1
     md:grid-cols-2
     lg:grid-cols-3
     xl:grid-cols-4
     gap-4
-  ">
-    <div class="
+  "
+  >
+    <div
+      class="
       text-sm md:text-base lg:text-lg
       p-2 md:p-4 lg:p-6
-    ">
+    "
+    >
       <!-- 内容 -->
     </div>
   </div>
@@ -617,6 +658,7 @@ export const useReportStore = defineStore('report', () => {
 ### IPC 通信模式
 
 #### 1. 主进程（处理器）
+
 ```typescript
 // src/main/index.ts
 import { app, BrowserWindow, ipcMain } from 'electron'
@@ -645,6 +687,7 @@ function sendProgressUpdate(window: BrowserWindow, progress: number) {
 ```
 
 #### 2. 预加载脚本（桥接）
+
 ```typescript
 // src/preload/index.ts
 import { contextBridge, ipcRenderer } from 'electron'
@@ -652,18 +695,15 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
   // 暴露安全的 IPC 方法
-  parseTemplate: (templatePath: string) =>
-    ipcRenderer.invoke('parse-template', templatePath),
+  parseTemplate: (templatePath: string) => ipcRenderer.invoke('parse-template', templatePath),
 
   generateReport: (contract: ReportContract, data: any) =>
     ipcRenderer.invoke('generate-report', contract, data),
 
   // 文件对话框
-  openFileDialog: (options: OpenDialogOptions) =>
-    ipcRenderer.invoke('open-file-dialog', options),
+  openFileDialog: (options: OpenDialogOptions) => ipcRenderer.invoke('open-file-dialog', options),
 
-  saveFileDialog: (options: SaveDialogOptions) =>
-    ipcRenderer.invoke('save-file-dialog', options),
+  saveFileDialog: (options: SaveDialogOptions) => ipcRenderer.invoke('save-file-dialog', options),
 
   // 监听来自主进程的消息
   onReportProgress: (callback: (progress: number) => void) => {
@@ -691,6 +731,7 @@ if (process.contextIsolated) {
 ```
 
 #### 3. 预加载类型定义
+
 ```typescript
 // src/preload/index.d.ts
 import { ElectronAPI } from '@electron-toolkit/preload'
@@ -713,6 +754,7 @@ declare global {
 ```
 
 #### 4. 渲染进程（调用）
+
 ```vue
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
@@ -747,6 +789,7 @@ onUnmounted(() => {
 ### 安全最佳实践
 
 #### 1. 必须启用的安全选项
+
 ```typescript
 // src/main/index.ts
 const createWindow = () => {
@@ -757,12 +800,12 @@ const createWindow = () => {
       preload: path.join(__dirname, '../preload/index.js'),
 
       // ✅ 必须启用
-      contextIsolation: true,    // 隔离渲染进程上下文
-      nodeIntegration: false,    // 禁止渲染进程直接使用 Node.js
-      sandbox: true,             // 启用沙盒模式
+      contextIsolation: true, // 隔离渲染进程上下文
+      nodeIntegration: false, // 禁止渲染进程直接使用 Node.js
+      sandbox: true, // 启用沙盒模式
 
       // ✅ 安全设置
-      webSecurity: true,         // 启用同源策略
+      webSecurity: true, // 启用同源策略
       allowRunningInsecureContent: false,
 
       // ✅ 禁用远程模块
@@ -773,6 +816,7 @@ const createWindow = () => {
 ```
 
 #### 2. 验证 IPC 输入
+
 ```typescript
 // src/main/index.ts
 import { z } from 'zod' // 推荐使用 zod 进行验证
@@ -780,7 +824,7 @@ import { z } from 'zod' // 推荐使用 zod 进行验证
 const ContractSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
-  templatePath: z.string().refine(path => {
+  templatePath: z.string().refine((path) => {
     // 验证路径安全性
     const normalized = path.normalize(templatePath)
     return !normalized.includes('..') // 防止路径遍历
@@ -803,29 +847,33 @@ ipcMain.handle('save-contract', async (event, contract: unknown) => {
 ```
 
 #### 3. 内容安全策略（CSP）
+
 ```html
 <!-- src/renderer/index.html -->
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self';
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
                  script-src 'self';
                  style-src 'self' 'unsafe-inline';
-                 img-src 'self' data:;" />
-  <title>国富 Excel 工具</title>
-</head>
-<body>
-  <div id="app"></div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
+                 img-src 'self' data:;"
+    />
+    <title>国富 Excel 工具</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
 ```
 
 ### 文件系统操作
 
 #### 1. 安全的文件路径处理
+
 ```typescript
 // src/main/file-operations.ts
 import path from 'path'
@@ -868,6 +916,7 @@ export async function saveContract(contract: ReportContract): Promise<void> {
 ```
 
 #### 2. 文件对话框
+
 ```typescript
 // src/main/index.ts
 import { dialog } from 'electron'
@@ -887,9 +936,7 @@ ipcMain.handle('open-file-dialog', async (event, options) => {
 
 ipcMain.handle('save-file-dialog', async (event, options) => {
   const result = await dialog.showSaveDialog({
-    filters: [
-      { name: 'Excel 文件', extensions: ['xlsx'] }
-    ],
+    filters: [{ name: 'Excel 文件', extensions: ['xlsx'] }],
     ...options
   })
 
@@ -959,16 +1006,20 @@ export default router
 考虑到 Tailwind CSS 4.x 的使用，推荐以下组件库：
 
 1. **Headless UI**（官方推荐）
+
    ```bash
    npm install @headlessui/vue
    ```
+
    - 无样式、可访问的 UI 组件
    - 完美配合 Tailwind CSS
 
 2. **Radix Vue**（社区选择）
+
    ```bash
    npm install radix-vue
    ```
+
    - Vue 3 的 Radix UI 移植
    - 强大的可访问性
 
@@ -1014,7 +1065,7 @@ const validateForm = (): boolean => {
     return true
   } catch (error) {
     if (error instanceof z.ZodError) {
-      error.errors.forEach(err => {
+      error.errors.forEach((err) => {
         const field = err.path[0] as keyof ContractForm
         errors.value[field] = err.message
       })
@@ -1055,20 +1106,11 @@ const handleSubmit = async () => {
     </div>
 
     <div>
-      <label for="description" class="block text-sm font-medium text-gray-700">
-        描述
-      </label>
-      <textarea
-        id="description"
-        v-model="form.description"
-        rows="3"
-        class="mt-1 input-field"
-      />
+      <label for="description" class="block text-sm font-medium text-gray-700"> 描述 </label>
+      <textarea id="description" v-model="form.description" rows="3" class="mt-1 input-field" />
     </div>
 
-    <button type="submit" class="btn-primary">
-      保存契约
-    </button>
+    <button type="submit" class="btn-primary">保存契约</button>
   </form>
 </template>
 ```
@@ -1168,9 +1210,7 @@ const triggerFileSelect = () => {
         或拖拽到此处
       </div>
 
-      <p class="text-xs text-gray-500">
-        支持 .xlsx, .xls 格式
-      </p>
+      <p class="text-xs text-gray-500">支持 .xlsx, .xls 格式</p>
     </div>
   </div>
 </template>
@@ -1213,8 +1253,8 @@ export async function renderReport(options: CarboneRenderOptions): Promise<strin
 
 // 解析模板中的标记
 export async function parseTemplateMarks(templatePath: string): Promise<{
-  dataMarks: string[]      // d.* 标记
-  variableMarks: string[]  // v.* 标记
+  dataMarks: string[] // d.* 标记
+  variableMarks: string[] // v.* 标记
 }> {
   const content = await fs.readFile(templatePath)
 
@@ -1312,7 +1352,6 @@ export async function extractDataByContract(
       const cell = worksheet?.getCell(cellAddress)
 
       result[binding.mark.replace('d.', '')] = cell?.value
-
     } else if (binding.type === 'list') {
       // 提取列表数据
       const [sheetName] = binding.coordinate.split('!')
@@ -1325,7 +1364,7 @@ export async function extractDataByContract(
 
       // 构建列映射
       const columnMap = new Map<string, number>()
-      binding.fieldMappings.forEach(mapping => {
+      binding.fieldMappings.forEach((mapping) => {
         const colIndex = headers.indexOf(mapping.headerText)
         if (colIndex !== -1) {
           columnMap.set(mapping.fieldName, colIndex)
@@ -1343,7 +1382,7 @@ export async function extractDataByContract(
         })
 
         // 如果行为空则停止
-        if (Object.values(rowData).every(v => !v)) break
+        if (Object.values(rowData).every((v) => !v)) break
 
         rows.push(rowData)
       }
@@ -1363,10 +1402,7 @@ export async function extractDataByContract(
 import { execa } from 'execa'
 
 // 执行外部命令（例如调用 Python 脚本）
-export async function executePythonScript(
-  scriptPath: string,
-  args: string[]
-): Promise<string> {
+export async function executePythonScript(scriptPath: string, args: string[]): Promise<string> {
   try {
     const { stdout, stderr } = await execa('python', [scriptPath, ...args], {
       cwd: process.cwd(),
@@ -1393,7 +1429,7 @@ export async function executeWithProgress(
 
   subprocess.stdout?.on('data', (data) => {
     const lines = data.toString().split('\n')
-    lines.forEach(line => {
+    lines.forEach((line) => {
       if (line.trim()) {
         onProgress(line)
       }
@@ -1425,7 +1461,7 @@ files:
   - resources/**/*
   - package.json
   - node_modules/**/*
-  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.gitignore,.gitattributes,.editorconfig,.eslintrc,.prettierrc,tsconfig*.json,*.md}"
+  - '!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.gitignore,.gitattributes,.editorconfig,.eslintrc,.prettierrc,tsconfig*.json,*.md}'
 
 # Windows 配置
 win:
@@ -1500,6 +1536,7 @@ asarUnpack:
 ### 代码签名（生产环境）
 
 #### Windows
+
 ```yaml
 win:
   certificateFile: path/to/cert.pfx
@@ -1510,13 +1547,15 @@ win:
 ```
 
 #### macOS
+
 ```yaml
 mac:
-  identity: "Developer ID Application: Your Name (TEAM_ID)"
+  identity: 'Developer ID Application: Your Name (TEAM_ID)'
   provisioningProfile: path/to/profile.provisionprofile
 ```
 
 环境变量：
+
 ```bash
 # macOS 签名
 export APPLE_ID=your@email.com
@@ -1531,6 +1570,7 @@ export APPLE_TEAM_ID=YOUR_TEAM_ID
 ### 添加新的 IPC 通道
 
 1. **主进程添加处理器**：
+
 ```typescript
 // src/main/index.ts
 ipcMain.handle('new-feature', async (event, arg) => {
@@ -1540,6 +1580,7 @@ ipcMain.handle('new-feature', async (event, arg) => {
 ```
 
 2. **预加载脚本暴露 API**：
+
 ```typescript
 // src/preload/index.ts
 const api = {
@@ -1549,6 +1590,7 @@ const api = {
 ```
 
 3. **更新类型定义**：
+
 ```typescript
 // src/preload/index.d.ts
 interface API {
@@ -1558,6 +1600,7 @@ interface API {
 ```
 
 4. **渲染进程调用**：
+
 ```typescript
 const result = await window.api.newFeature(arg)
 ```
@@ -1565,11 +1608,13 @@ const result = await window.api.newFeature(arg)
 ### 添加新的 Vue 页面
 
 1. **创建页面组件**：
+
 ```bash
 # src/renderer/src/views/NewPage.vue
 ```
 
 2. **添加路由**：
+
 ```typescript
 // src/renderer/src/router/index.ts
 {
@@ -1580,6 +1625,7 @@ const result = await window.api.newFeature(arg)
 ```
 
 3. **添加导航**：
+
 ```vue
 <router-link to="/new-page">新页面</router-link>
 ```
@@ -1587,6 +1633,7 @@ const result = await window.api.newFeature(arg)
 ### 添加环境变量
 
 1. **创建 `.env` 文件**：
+
 ```bash
 # .env.development
 MAIN_VITE_API_URL=http://localhost:3000
@@ -1594,6 +1641,7 @@ RENDERER_VITE_API_URL=http://localhost:3000
 ```
 
 2. **访问环境变量**：
+
 ```typescript
 // 主进程
 const apiUrl = import.meta.env.MAIN_VITE_API_URL
@@ -1603,6 +1651,7 @@ const apiUrl = import.meta.env.RENDERER_VITE_API_URL
 ```
 
 3. **类型定义**：
+
 ```typescript
 // src/env.d.ts
 /// <reference types="vite/client" />
@@ -1620,6 +1669,7 @@ interface ImportMeta {
 ### 调试技巧
 
 #### 主进程调试（VSCode）
+
 ```json
 // .vscode/launch.json
 {
@@ -1658,9 +1708,11 @@ interface ImportMeta {
 ```
 
 #### 渲染进程调试
+
 开发模式下按 `Ctrl+Shift+I`（Windows/Linux）或 `Cmd+Option+I`（macOS）打开 DevTools。
 
 #### 主进程日志
+
 ```typescript
 // src/main/index.ts
 import log from 'electron-log'
@@ -1681,42 +1733,52 @@ log.error('错误信息', error)
 ### 常见问题
 
 #### 1. 渲染进程无法访问 Node.js API
+
 **错误**：`require is not defined`
 
 **原因**：未正确配置预加载脚本或 `contextIsolation: false`
 
 **解决**：
+
 - 确保 `contextIsolation: true`
 - 通过预加载脚本的 `contextBridge` 暴露 API
 - 不要在渲染进程直接使用 `require` 或 Node.js API
 
 #### 2. IPC 通信失败
+
 **错误**：`Error: An object could not be cloned`
 
 **原因**：IPC 传递的对象包含不可序列化的内容（如函数、循环引用）
 
 **解决**：
+
 - 只传递纯数据对象（JSON 可序列化）
 - 移除函数、Symbol、循环引用
 
 #### 3. 打包后找不到模块
+
 **错误**：`Cannot find module 'xxx'`
 
 **原因**：
+
 - 原生模块未正确打包
 - 动态 `require` 未被 Rollup 识别
 
 **解决**：
+
 - 使用 `externalizeDepsPlugin()` 外部化依赖
 - 添加到 `asarUnpack`（如果是原生模块）
 - 避免使用动态 `require`
 
 #### 4. 热重载不生效
+
 **原因**：
+
 - 文件监听失败
 - 配置错误
 
 **解决**：
+
 ```bash
 # 清除缓存并重启
 rm -rf node_modules/.vite
@@ -1724,33 +1786,36 @@ npm run dev
 ```
 
 #### 5. TypeScript 类型错误
+
 **错误**：`Property 'api' does not exist on type 'Window'`
 
 **原因**：缺少类型定义
 
 **解决**：
+
 - 确保 `src/preload/index.d.ts` 存在
 - 在渲染进程添加 `/// <reference types="@electron-toolkit/preload" />`
 
 #### 6. Tailwind CSS 样式不生效
+
 **原因**：配置错误或未扫描到文件
 
 **解决**：
+
 ```javascript
 // tailwind.config.js
 export default {
-  content: [
-    './src/renderer/index.html',
-    './src/renderer/src/**/*.{vue,js,ts,jsx,tsx}'
-  ],
+  content: ['./src/renderer/index.html', './src/renderer/src/**/*.{vue,js,ts,jsx,tsx}']
   // ...
 }
 ```
 
 #### 7. Vite 构建错误：`Top-level await is not available`
+
 **原因**：目标环境不支持 top-level await
 
 **解决**：
+
 ```typescript
 // electron.vite.config.ts
 export default defineConfig({
@@ -1767,6 +1832,7 @@ export default defineConfig({
 ## 性能优化建议
 
 ### 1. 代码分割
+
 ```typescript
 // 路由懒加载
 const routes = [
@@ -1777,12 +1843,11 @@ const routes = [
 ]
 
 // 组件懒加载
-const HeavyComponent = defineAsyncComponent(() =>
-  import('@renderer/components/HeavyComponent.vue')
-)
+const HeavyComponent = defineAsyncComponent(() => import('@renderer/components/HeavyComponent.vue'))
 ```
 
 ### 2. 优化 IPC 通信
+
 ```typescript
 // ❌ 频繁通信
 for (let i = 0; i < 1000; i++) {
@@ -1794,6 +1859,7 @@ await window.api.saveItems(items)
 ```
 
 ### 3. 主进程避免阻塞
+
 ```typescript
 // ❌ 同步操作
 const data = fs.readFileSync(path)
@@ -1809,6 +1875,7 @@ worker.postMessage(data)
 ```
 
 ### 4. 减小打包体积
+
 ```bash
 # 分析包大小
 npm run build
@@ -1826,6 +1893,7 @@ npm prune --production
 ## 团队协作规范
 
 ### Git 提交规范
+
 ```
 <type>(<scope>): <subject>
 
@@ -1835,6 +1903,7 @@ npm prune --production
 ```
 
 **Type**:
+
 - `feat`: 新功能
 - `fix`: 修复 bug
 - `docs`: 文档更新
@@ -1845,6 +1914,7 @@ npm prune --production
 - `chore`: 构建/工具链
 
 **示例**:
+
 ```
 feat(renderer): 添加报表预览功能
 
@@ -1854,6 +1924,7 @@ Closes #123
 ```
 
 ### 代码审查检查清单
+
 - [ ] TypeScript 类型完整
 - [ ] 无 ESLint/Prettier 错误
 - [ ] IPC 通信安全（输入验证）
@@ -1863,7 +1934,9 @@ Closes #123
 - [ ] 性能考量
 
 ### 文档更新
+
 修改代码时，同步更新：
+
 - API 变更 → 更新类型定义
 - 新功能 → 更新 README
 - 架构变更 → 更新 AGENT.md
@@ -1873,6 +1946,7 @@ Closes #123
 ## 附录
 
 ### 推荐 VSCode 扩展
+
 - **Vue - Official**（Volar）
 - **TypeScript Vue Plugin (Volar)**
 - **ESLint**
@@ -1882,6 +1956,7 @@ Closes #123
 - **Auto Rename Tag**
 
 ### 推荐学习资源
+
 - [Electron 官方文档](https://www.electronjs.org/docs/latest)
 - [electron-vite 官方文档](https://electron-vite.org/)
 - [Vue 3 官方文档](https://vuejs.org/)
@@ -1891,6 +1966,7 @@ Closes #123
 ### 项目依赖清单（建议补充）
 
 #### 生产依赖
+
 ```json
 {
   "dependencies": {
@@ -1907,6 +1983,7 @@ Closes #123
 ```
 
 #### 开发依赖
+
 ```json
 {
   "devDependencies": {
@@ -1949,4 +2026,3 @@ Closes #123
 **文档版本**：v1.0.0
 **最后更新**：2025-11-07
 **维护者**：AI Agent + 开发团队
-

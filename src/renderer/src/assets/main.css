@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* 配置 Tailwind 扫描源文件 */
 @source "../../../index.html";

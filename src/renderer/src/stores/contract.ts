@@ -66,11 +66,7 @@ export const useContractStore = defineStore('contract', () => {
     console.log('加载契约列表')
   }
 
-  function createNewDraft(
-    templateFileName: string,
-    templatePath: string,
-    markItems: MarkItem[]
-  ) {
+  function createNewDraft(templateFileName: string, templatePath: string, markItems: MarkItem[]) {
     contractDraft.value = {
       templateFileName,
       templatePath,
@@ -167,4 +163,3 @@ export const useContractStore = defineStore('contract', () => {
     clearDraft
   }
 })
-

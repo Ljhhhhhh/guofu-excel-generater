@@ -32,7 +32,7 @@ const mockFields = computed(() => {
 
 // 字段映射
 const fieldMappings = ref<FieldMapping[]>(
-  mockFields.value.map(field => ({
+  mockFields.value.map((field) => ({
     fieldName: field,
     headerText: ''
   }))
@@ -44,7 +44,7 @@ const handleSave = () => {
     return
   }
 
-  if (rangeMethod.value === 'header' && fieldMappings.value.some(fm => !fm.headerText)) {
+  if (rangeMethod.value === 'header' && fieldMappings.value.some((fm) => !fm.headerText)) {
     alert('请填写所有字段映射')
     return
   }
@@ -88,12 +88,7 @@ const handleSave = () => {
       </div>
 
       <!-- 工作表名称 -->
-      <Input
-        v-model="sheetName"
-        label="2. 选择工作表"
-        placeholder="例如: DataSheet"
-        required
-      />
+      <Input v-model="sheetName" label="2. 选择工作表" placeholder="例如: DataSheet" required />
 
       <!-- 指定数据范围方法 -->
       <div>
@@ -102,30 +97,15 @@ const handleSave = () => {
         </label>
         <div class="space-y-2">
           <label class="flex items-center">
-            <input
-              v-model="rangeMethod"
-              type="radio"
-              value="header"
-              class="mr-2"
-            />
+            <input v-model="rangeMethod" type="radio" value="header" class="mr-2" />
             <span class="text-sm">从表头行开始 (推荐)</span>
           </label>
           <label class="flex items-center">
-            <input
-              v-model="rangeMethod"
-              type="radio"
-              value="fixed"
-              class="mr-2"
-            />
+            <input v-model="rangeMethod" type="radio" value="fixed" class="mr-2" />
             <span class="text-sm">固定范围 (例如 A2:C50)</span>
           </label>
           <label class="flex items-center">
-            <input
-              v-model="rangeMethod"
-              type="radio"
-              value="column"
-              class="mr-2"
-            />
+            <input v-model="rangeMethod" type="radio" value="column" class="mr-2" />
             <span class="text-sm">整列 (例如 A:A, C:C)</span>
           </label>
         </div>
@@ -133,9 +113,7 @@ const handleSave = () => {
 
       <!-- 从表头行开始的配置 -->
       <div v-if="rangeMethod === 'header'" class="space-y-4 pl-4 border-l-2 border-blue-200">
-        <div class="text-sm font-medium text-gray-700">
-          4. 定义绑定 (从表头行开始)
-        </div>
+        <div class="text-sm font-medium text-gray-700">4. 定义绑定 (从表头行开始)</div>
 
         <!-- 表头行号 -->
         <Input
@@ -154,7 +132,7 @@ const handleSave = () => {
           <p class="text-xs text-gray-600 mb-3">
             模板 <code>{{ mark }}</code> 包含以下字段 (自动解析):
           </p>
-          
+
           <div class="space-y-3">
             <div
               v-for="(fm, index) in fieldMappings"
@@ -164,11 +142,7 @@ const handleSave = () => {
               <div class="text-sm font-mono text-gray-600 py-2">
                 {{ fm.fieldName }}
               </div>
-              <Input
-                v-model="fieldMappings[index].headerText"
-                placeholder="例如: 姓名"
-                required
-              />
+              <Input v-model="fieldMappings[index].headerText" placeholder="例如: 姓名" required />
             </div>
           </div>
         </div>
@@ -184,11 +158,8 @@ const handleSave = () => {
       </div>
 
       <div class="pt-4">
-        <Button variant="primary" @click="handleSave">
-          保存此项配置
-        </Button>
+        <Button variant="primary" @click="handleSave"> 保存此项配置 </Button>
       </div>
     </div>
   </div>
 </template>
-

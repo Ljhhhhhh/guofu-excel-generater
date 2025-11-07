@@ -14,7 +14,11 @@ const contractStore = useContractStore()
 const currentStep = ref(1)
 
 // 步骤1完成后的回调
-const handleStep1Complete = (templateFileName: string, templatePath: string, markItems: MarkItem[]) => {
+const handleStep1Complete = (
+  templateFileName: string,
+  templatePath: string,
+  markItems: MarkItem[]
+) => {
   contractStore.createNewDraft(templateFileName, templatePath, markItems)
   currentStep.value = 2
 }
@@ -23,7 +27,7 @@ const handleStep1Complete = (templateFileName: string, templatePath: string, mar
 const canProceedToStep3 = computed(() => {
   if (!contractStore.contractDraft) return false
   // 检查是否所有标记都已配置
-  return contractStore.contractDraft.markItems.every(m => m.configured)
+  return contractStore.contractDraft.markItems.every((m) => m.configured)
 })
 
 // 进入步骤3
@@ -52,7 +56,7 @@ const handleStep3Complete = (contractName: string, description?: string) => {
 
   contractStore.saveContract(newContract)
   contractStore.clearDraft()
-  
+
   // 返回到 Dashboard
   router.push('/')
 }
@@ -116,12 +120,7 @@ const handlePrevStep = () => {
             </li>
 
             <!-- 连接线 -->
-            <div
-              :class="[
-                'w-16 h-0.5',
-                currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
-              ]"
-            ></div>
+            <div :class="['w-16 h-0.5', currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300']"></div>
 
             <!-- 步骤2 -->
             <li class="flex items-center">
@@ -146,12 +145,7 @@ const handlePrevStep = () => {
             </li>
 
             <!-- 连接线 -->
-            <div
-              :class="[
-                'w-16 h-0.5',
-                currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
-              ]"
-            ></div>
+            <div :class="['w-16 h-0.5', currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300']"></div>
 
             <!-- 步骤3 -->
             <li class="flex items-center">
@@ -183,10 +177,7 @@ const handlePrevStep = () => {
     <main class="flex-1 overflow-y-auto">
       <div class="max-w-7xl mx-auto px-6 py-8">
         <!-- 步骤1: 上传模板 -->
-        <Step1UploadTemplate
-          v-if="currentStep === 1"
-          @complete="handleStep1Complete"
-        />
+        <Step1UploadTemplate v-if="currentStep === 1" @complete="handleStep1Complete" />
 
         <!-- 步骤2: 配置契约 -->
         <Step2ConfigureContract
@@ -206,4 +197,3 @@ const handlePrevStep = () => {
     </main>
   </div>
 </template>
-

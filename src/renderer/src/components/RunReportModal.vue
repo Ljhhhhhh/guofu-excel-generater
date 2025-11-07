@@ -15,7 +15,10 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'generate', data: { parameters: RuntimeParameterValue[]; dataFiles: RuntimeDataSourceFile[] }): void
+  (
+    e: 'generate',
+    data: { parameters: RuntimeParameterValue[]; dataFiles: RuntimeDataSourceFile[] }
+  ): void
 }>()
 
 const contractStore = useContractStore()
@@ -35,7 +38,7 @@ const contract = computed(() => {
 // 契约中的参数定义
 const parameters = computed(() => {
   if (!contract.value) return []
-  return contract.value.bindings.filter(b => b.type === 'parameter')
+  return contract.value.bindings.filter((b) => b.type === 'parameter')
 })
 
 // 是否有参数
@@ -43,7 +46,7 @@ const hasParameters = computed(() => parameters.value.length > 0)
 
 // 是否可以生成报表 (所有数据源文件都已上传)
 const canGenerate = computed(() => {
-  return dataSourceFiles.value.every(df => df.file !== null)
+  return dataSourceFiles.value.every((df) => df.file !== null)
 })
 
 // 监听契约变化,初始化表单
@@ -53,7 +56,7 @@ watch(
     if (!newId || !contract.value) return
 
     // 初始化参数值
-    parameterValues.value = parameters.value.map(p => {
+    parameterValues.value = parameters.value.map((p) => {
       if (p.type !== 'parameter') return { mark: '', value: '' }
       return {
         mark: p.mark,
@@ -62,7 +65,7 @@ watch(
     })
 
     // 初始化数据源文件列表
-    dataSourceFiles.value = contract.value.dataSources.map(ds => ({
+    dataSourceFiles.value = contract.value.dataSources.map((ds) => ({
       dataSourceId: ds.id,
       dataSourceName: ds.name,
       file: null
@@ -72,7 +75,7 @@ watch(
 )
 
 const handleFileUpload = (dataSourceId: string, file: File) => {
-  const dsFile = dataSourceFiles.value.find(df => df.dataSourceId === dataSourceId)
+  const dsFile = dataSourceFiles.value.find((df) => df.dataSourceId === dataSourceId)
   if (dsFile) {
     dsFile.file = file
   }
@@ -80,7 +83,7 @@ const handleFileUpload = (dataSourceId: string, file: File) => {
 
 const handleGenerate = () => {
   if (!canGenerate.value) return
-  
+
   emit('generate', {
     parameters: parameterValues.value,
     dataFiles: dataSourceFiles.value
@@ -101,9 +104,7 @@ const handleClose = () => {
           <span v-if="hasParameters && contract.dataSources.length > 0">
             此报表需要 {{ parameters.length }} 个参数和 {{ contract.dataSources.length }} 个数据源。
           </span>
-          <span v-else-if="hasParameters">
-            此报表需要 {{ parameters.length }} 个参数。
-          </span>
+          <span v-else-if="hasParameters"> 此报表需要 {{ parameters.length }} 个参数。 </span>
           <span v-else-if="contract.dataSources.length > 0">
             此报表需要 {{ contract.dataSources.length }} 个数据源文件。请上传最新数据。
           </span>
@@ -115,17 +116,15 @@ const handleClose = () => {
         <div class="border-b border-gray-200 pb-2">
           <h4 class="text-lg font-semibold text-gray-900">1. 参数输入</h4>
         </div>
-        
-        <div
-          v-for="(param, index) in parameters"
-          :key="param.mark"
-          class="space-y-2"
-        >
+
+        <div v-for="(param, index) in parameters" :key="param.mark" class="space-y-2">
           <Input
             v-if="param.type === 'parameter'"
             v-model="parameterValues[index].value"
             :label="param.displayLabel"
-            :type="param.dataType === 'number' ? 'number' : param.dataType === 'date' ? 'date' : 'text'"
+            :type="
+              param.dataType === 'number' ? 'number' : param.dataType === 'date' ? 'date' : 'text'
+            "
             :placeholder="param.defaultValue ? `默认值: ${param.defaultValue}` : ''"
           />
         </div>
@@ -139,11 +138,7 @@ const handleClose = () => {
           </h4>
         </div>
 
-        <div
-          v-for="dsFile in dataSourceFiles"
-          :key="dsFile.dataSourceId"
-          class="space-y-2"
-        >
+        <div v-for="dsFile in dataSourceFiles" :key="dsFile.dataSourceId" class="space-y-2">
           <FileUpload
             :label="dsFile.dataSourceName"
             @upload="(file) => handleFileUpload(dsFile.dataSourceId, file as File)"
@@ -155,15 +150,10 @@ const handleClose = () => {
     <template #footer>
       <div class="flex justify-end gap-3">
         <Button variant="outline" @click="handleClose">取消</Button>
-        <Button
-          variant="primary"
-          :disabled="!canGenerate"
-          @click="handleGenerate"
-        >
+        <Button variant="primary" :disabled="!canGenerate" @click="handleGenerate">
           生成报表
         </Button>
       </div>
     </template>
   </Modal>
 </template>
-

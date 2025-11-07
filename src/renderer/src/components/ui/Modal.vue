@@ -51,10 +51,7 @@ const handleBackdropClick = (e: MouseEvent) => {
           leave-from-class="scale-100 opacity-100"
           leave-to-class="scale-95 opacity-0"
         >
-          <div
-            v-if="show"
-            :class="['bg-white rounded-lg shadow-xl w-full', sizeClasses[size]]"
-          >
+          <div v-if="show" :class="['bg-white rounded-lg shadow-xl w-full', sizeClasses[size]]">
             <!-- 标题栏 -->
             <div
               v-if="title || $slots.header"
@@ -93,4 +90,3 @@ const handleBackdropClick = (e: MouseEvent) => {
     </Transition>
   </Teleport>
 </template>
-

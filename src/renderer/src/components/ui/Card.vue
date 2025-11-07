@@ -19,4 +19,3 @@ withDefaults(defineProps<Props>(), {
     </div>
   </div>
 </template>
-

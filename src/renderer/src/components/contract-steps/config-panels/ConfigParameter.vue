@@ -51,9 +51,7 @@ const handleSave = () => {
         required
       >
         <template #help>
-          <p class="text-xs text-gray-500 mt-1">
-            提示：在"运行"时显示给用户的友好名称
-          </p>
+          <p class="text-xs text-gray-500 mt-1">提示：在"运行"时显示给用户的友好名称</p>
         </template>
       </Input>
 
@@ -81,11 +79,8 @@ const handleSave = () => {
       />
 
       <div class="pt-4">
-        <Button variant="primary" @click="handleSave">
-          保存此项配置
-        </Button>
+        <Button variant="primary" @click="handleSave"> 保存此项配置 </Button>
       </div>
     </div>
   </div>
 </template>
-

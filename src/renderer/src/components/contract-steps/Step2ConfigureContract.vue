@@ -29,12 +29,14 @@ const draft = computed(() => contractStore.contractDraft)
 
 // 数据标记列表
 const dataMarks = computed(() => {
-  return draft.value?.markItems.filter(m => m.markType === 'single' || m.markType === 'list') || []
+  return (
+    draft.value?.markItems.filter((m) => m.markType === 'single' || m.markType === 'list') || []
+  )
 })
 
 // 参数标记列表
 const parameterMarks = computed(() => {
-  return draft.value?.markItems.filter(m => m.markType === 'parameter') || []
+  return draft.value?.markItems.filter((m) => m.markType === 'parameter') || []
 })
 
 // 选择标记
@@ -60,7 +62,7 @@ const handleAddDataSource = () => {
 // 开始编辑数据源名称
 const startEditDataSource = (id: string) => {
   editingDataSourceId.value = id
-  const ds = draft.value?.dataSources.find(d => d.id === id)
+  const ds = draft.value?.dataSources.find((d) => d.id === id)
   if (ds) {
     newDataSourceName.value = ds.name
   }
@@ -88,9 +90,7 @@ const cancelEditDataSource = () => {
     <div class="lg:col-span-1">
       <Card title="待配置清单" :padding="false">
         <div class="p-4">
-          <p class="text-sm text-gray-600 mb-4">
-            模板中的所有标记都在这里，请逐项完成配置。
-          </p>
+          <p class="text-sm text-gray-600 mb-4">模板中的所有标记都在这里，请逐项完成配置。</p>
 
           <!-- 数据标记 -->
           <div v-if="dataMarks.length > 0" class="mb-6">
@@ -106,8 +106,8 @@ const cancelEditDataSource = () => {
                   selectedMark?.mark === mark.mark
                     ? 'border-blue-500 bg-blue-50'
                     : mark.configured
-                    ? 'border-green-300 bg-green-50 hover:bg-green-100'
-                    : 'border-gray-300 bg-white hover:bg-gray-50'
+                      ? 'border-green-300 bg-green-50 hover:bg-green-100'
+                      : 'border-gray-300 bg-white hover:bg-gray-50'
                 ]"
               >
                 <div class="flex items-start justify-between">
@@ -150,8 +150,8 @@ const cancelEditDataSource = () => {
                   selectedMark?.mark === mark.mark
                     ? 'border-blue-500 bg-blue-50'
                     : mark.configured
-                    ? 'border-green-300 bg-green-50 hover:bg-green-100'
-                    : 'border-gray-300 bg-white hover:bg-gray-50'
+                      ? 'border-green-300 bg-green-50 hover:bg-green-100'
+                      : 'border-gray-300 bg-white hover:bg-gray-50'
                 ]"
               >
                 <div class="flex items-start justify-between">
@@ -184,15 +184,8 @@ const cancelEditDataSource = () => {
 
       <!-- 导航按钮 -->
       <div class="mt-6 flex gap-3">
-        <Button variant="outline" class="flex-1" @click="emit('prev')">
-          上一步
-        </Button>
-        <Button
-          variant="primary"
-          class="flex-1"
-          :disabled="!canProceed"
-          @click="emit('next')"
-        >
+        <Button variant="outline" class="flex-1" @click="emit('prev')"> 上一步 </Button>
+        <Button variant="primary" class="flex-1" :disabled="!canProceed" @click="emit('next')">
           下一步
         </Button>
       </div>
@@ -203,9 +196,7 @@ const cancelEditDataSource = () => {
       <!-- 右侧区域 A：数据源管理 -->
       <Card title="数据源管理" :padding="false">
         <div class="p-4">
-          <p class="text-sm text-gray-600 mb-4">
-            声明此契约需要几个数据源。
-          </p>
+          <p class="text-sm text-gray-600 mb-4">声明此契约需要几个数据源。</p>
 
           <div class="space-y-2 mb-4">
             <div
@@ -213,10 +204,8 @@ const cancelEditDataSource = () => {
               :key="ds.id"
               class="flex items-center gap-2 p-2 border border-gray-200 rounded-md"
             >
-              <div
-                class="w-2 h-2 rounded-full bg-blue-600"
-              ></div>
-              
+              <div class="w-2 h-2 rounded-full bg-blue-600"></div>
+
               <input
                 v-if="editingDataSourceId === ds.id"
                 v-model="newDataSourceName"
@@ -226,7 +215,7 @@ const cancelEditDataSource = () => {
                 @keyup.esc="cancelEditDataSource"
               />
               <span v-else class="flex-1 text-sm font-medium text-gray-900">{{ ds.name }}</span>
-              
+
               <button
                 v-if="editingDataSourceId === ds.id"
                 @click="saveDataSourceName"
@@ -259,9 +248,7 @@ const cancelEditDataSource = () => {
               class="flex-1 px-3 py-2 border border-gray-300 rounded-md"
               @keyup.enter="handleAddDataSource"
             />
-            <Button variant="primary" @click="handleAddDataSource">
-              添加数据源
-            </Button>
+            <Button variant="primary" @click="handleAddDataSource"> 添加数据源 </Button>
           </div>
         </div>
       </Card>
@@ -314,4 +301,3 @@ const cancelEditDataSource = () => {
     </div>
   </div>
 </template>
-
