@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useContractStore } from '../../stores/contract'
 import Card from '../ui/Card.vue'
 import Button from '../ui/Button.vue'
 import ConfigSingleValue from './config-panels/ConfigSingleValue.vue'
 import ConfigList from './config-panels/ConfigList.vue'
 import ConfigParameter from './config-panels/ConfigParameter.vue'
-import type { MarkItem, DataBinding } from '../../types/contract'
+import type { MarkItem, DataBinding } from '@shared/types/contract'
 
 interface Props {
   canProceed: boolean
@@ -20,23 +21,22 @@ const emit = defineEmits<{
 }>()
 
 const contractStore = useContractStore()
+const { contractDraft: draft } = storeToRefs(contractStore)
 
 const selectedMark = ref<MarkItem | null>(null)
 const editingDataSourceId = ref<string | null>(null)
 const newDataSourceName = ref('')
 
-const draft = computed(() => contractStore.contractDraft)
-
 // 数据标记列表
 const dataMarks = computed(() => {
-  return (
-    draft.value?.markItems.filter((m) => m.markType === 'single' || m.markType === 'list') || []
-  )
+  if (!draft.value) return []
+  return draft.value.markItems.filter((m) => m.markType === 'single' || m.markType === 'list')
 })
 
 // 参数标记列表
 const parameterMarks = computed(() => {
-  return draft.value?.markItems.filter((m) => m.markType === 'parameter') || []
+  if (!draft.value) return []
+  return draft.value.markItems.filter((m) => m.markType === 'parameter')
 })
 
 // 选择标记
@@ -99,7 +99,6 @@ const cancelEditDataSource = () => {
               <button
                 v-for="mark in dataMarks"
                 :key="mark.mark"
-                @click="selectMark(mark)"
                 :class="[
                   'w-full text-left px-3 py-2 rounded-md transition-colors',
                   'border',
@@ -109,6 +108,7 @@ const cancelEditDataSource = () => {
                       ? 'border-green-300 bg-green-50 hover:bg-green-100'
                       : 'border-gray-300 bg-white hover:bg-gray-50'
                 ]"
+                @click="selectMark(mark)"
               >
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
@@ -119,7 +119,7 @@ const cancelEditDataSource = () => {
                   </div>
                   <svg
                     v-if="mark.configured"
-                    class="w-5 h-5 text-green-600 flex-shrink-0 ml-2"
+                    class="w-5 h-5 text-green-600 shrink-0 ml-2"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -143,7 +143,6 @@ const cancelEditDataSource = () => {
               <button
                 v-for="mark in parameterMarks"
                 :key="mark.mark"
-                @click="selectMark(mark)"
                 :class="[
                   'w-full text-left px-3 py-2 rounded-md transition-colors',
                   'border',
@@ -153,6 +152,7 @@ const cancelEditDataSource = () => {
                       ? 'border-green-300 bg-green-50 hover:bg-green-100'
                       : 'border-gray-300 bg-white hover:bg-gray-50'
                 ]"
+                @click="selectMark(mark)"
               >
                 <div class="flex items-start justify-between">
                   <div class="flex-1">
@@ -163,7 +163,7 @@ const cancelEditDataSource = () => {
                   </div>
                   <svg
                     v-if="mark.configured"
-                    class="w-5 h-5 text-green-600 flex-shrink-0 ml-2"
+                    class="w-5 h-5 text-green-600 shrink-0 ml-2"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -218,22 +218,22 @@ const cancelEditDataSource = () => {
 
               <button
                 v-if="editingDataSourceId === ds.id"
-                @click="saveDataSourceName"
                 class="text-green-600 hover:text-green-700 text-sm"
+                @click="saveDataSourceName"
               >
                 保存
               </button>
               <button
                 v-if="editingDataSourceId === ds.id"
-                @click="cancelEditDataSource"
                 class="text-gray-600 hover:text-gray-700 text-sm"
+                @click="cancelEditDataSource"
               >
                 取消
               </button>
               <button
                 v-else
-                @click="startEditDataSource(ds.id)"
                 class="text-blue-600 hover:text-blue-700 text-sm"
+                @click="startEditDataSource(ds.id)"
               >
                 重命名
               </button>

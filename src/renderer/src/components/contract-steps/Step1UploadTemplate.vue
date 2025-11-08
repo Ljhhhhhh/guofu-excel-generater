@@ -3,57 +3,52 @@ import { ref } from 'vue'
 import Card from '../ui/Card.vue'
 import Button from '../ui/Button.vue'
 import FileUpload from '../ui/FileUpload.vue'
-import type { MarkItem } from '../../types/contract'
+import type { MarkItem } from '@shared/types/contract'
+import type { SelectedFile } from '@shared/types/file'
 
 const emit = defineEmits<{
-  (e: 'complete', templateFileName: string, templatePath: string, markItems: MarkItem[]): void
+  (
+    e: 'complete',
+    templateFileName: string,
+    templatePath: string,
+    templateChecksum: string,
+    markItems: MarkItem[]
+  ): void
 }>()
 
-const uploadedFile = ref<File | null>(null)
+const uploadedFile = ref<SelectedFile | null>(null)
 const isProcessing = ref(false)
+const parseError = ref<string | null>(null)
 
-const handleFileUpload = (file: File | File[]) => {
-  if (Array.isArray(file)) {
-    uploadedFile.value = file[0]
-  } else {
-    uploadedFile.value = file
-  }
+const excelFilters = [{ name: 'Excel 模板', extensions: ['xlsx', 'xls'] }]
+
+const handleFileUpload = (file: SelectedFile | SelectedFile[]) => {
+  const selected = Array.isArray(file) ? file[0] : file
+  if (!selected) return
+  uploadedFile.value = selected
+  parseError.value = null
 }
 
 const handleProceed = async () => {
   if (!uploadedFile.value) return
 
+  if (!window.api?.templates?.parse || !window.api.templates.store) {
+    parseError.value = '主进程未暴露模板存储或解析 API'
+    return
+  }
+
   isProcessing.value = true
-
-  // 模拟解析模板
-  // 实际实现: const result = await window.api.parseTemplate(uploadedFile.value.path)
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  // 模拟解析结果
-  const mockMarkItems: MarkItem[] = [
-    {
-      mark: 'd.company_name',
-      markType: 'single',
-      configured: false,
-      displayText: ''
-    },
-    {
-      mark: 'd.users[]',
-      markType: 'list',
-      configured: false,
-      displayText: ''
-    },
-    {
-      mark: 'v.report_month',
-      markType: 'parameter',
-      configured: false,
-      displayText: ''
-    }
-  ]
-
-  isProcessing.value = false
-
-  emit('complete', uploadedFile.value.name, '/path/to/template', mockMarkItems)
+  parseError.value = null
+  try {
+    const stored = await window.api.templates.store(uploadedFile.value.path)
+    const result = await window.api.templates.parse(stored.storedPath)
+    console.log(result, 'result')
+    emit('complete', stored.fileName, stored.storedPath, stored.checksum, result.markItems)
+  } catch (error) {
+    parseError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    isProcessing.value = false
+  }
 }
 </script>
 
@@ -64,20 +59,14 @@ const handleProceed = async () => {
         <div class="prose prose-sm max-w-none">
           <p class="text-gray-600">
             请上传您的 Excel 报表模板文件。系统将自动解析模板中的所有 Carbone 标记（例如
-            <code class="text-sm bg-gray-100 px-1 py-0.5 rounded"
-              >{'{'}{{ '{' }} d.name {'}'}{{ '}' }}</code
-            >、
-            <code class="text-sm bg-gray-100 px-1 py-0.5 rounded"
-              >{'{'}{{ '{' }} d.users[] {'}'}{{ '}' }}</code
-            >、
-            <code class="text-sm bg-gray-100 px-1 py-0.5 rounded"
-              >{'{'}{{ '{' }} v.report_month {'}'}{{ '}' }}</code
-            >
+            <code class="text-sm bg-gray-100 px-1 py-0.5 rounded">{d.name}</code>、
+            <code class="text-sm bg-gray-100 px-1 py-0.5 rounded">{d.users[]}</code>、
+            <code class="text-sm bg-gray-100 px-1 py-0.5 rounded">{v.report_month}</code>
             ），并为您生成配置清单。
           </p>
         </div>
 
-        <FileUpload label="选择模板文件" accept=".xlsx,.xls" @upload="handleFileUpload" />
+        <FileUpload label="选择模板文件" :filters="excelFilters" @select="handleFileUpload" />
 
         <div v-if="uploadedFile" class="bg-green-50 border border-green-200 rounded-lg p-4">
           <div class="flex items-start">
@@ -124,6 +113,25 @@ const handleProceed = async () => {
               ></path>
             </svg>
             <span class="ml-3 text-sm text-blue-800">正在解析模板，请稍候...</span>
+          </div>
+        </div>
+
+        <div v-if="parseError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="flex items-start">
+            <svg
+              class="w-5 h-5 text-red-600 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <p class="ml-3 text-sm text-red-700">{{ parseError }}</p>
           </div>
         </div>
 

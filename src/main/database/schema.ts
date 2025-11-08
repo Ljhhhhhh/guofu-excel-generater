@@ -7,6 +7,7 @@ const CREATE_REPORT_CONTRACTS = `
     description TEXT,
     template_path TEXT NOT NULL,
     template_file_name TEXT NOT NULL,
+    template_checksum TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )
@@ -94,7 +95,23 @@ export function ensureSchema(db: Database.Database): void {
     for (const sql of statements) {
       db.prepare(sql).run()
     }
+    ensureColumnExists(db, 'report_contracts', 'template_checksum', "TEXT NOT NULL DEFAULT ''")
   })
 
   runStatements()
+}
+
+function ensureColumnExists(
+  db: Database.Database,
+  tableName: string,
+  columnName: string,
+  columnDefinition: string
+): void {
+  const columns = db
+    .prepare<unknown[], { name: string }>(`PRAGMA table_info(${tableName})`)
+    .all()
+
+  if (!columns.some((column) => column.name === columnName)) {
+    db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`).run()
+  }
 }

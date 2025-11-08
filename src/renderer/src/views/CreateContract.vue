@@ -1,25 +1,36 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useContractStore } from '../stores/contract'
 import Button from '../components/ui/Button.vue'
 import Step1UploadTemplate from '../components/contract-steps/Step1UploadTemplate.vue'
 import Step2ConfigureContract from '../components/contract-steps/Step2ConfigureContract.vue'
 import Step3TestAndSave from '../components/contract-steps/Step3TestAndSave.vue'
-import type { MarkItem } from '../types/contract'
+import type { MarkItem } from '@shared/types/contract'
 
 const router = useRouter()
 const contractStore = useContractStore()
 
 const currentStep = ref(1)
 
+watch(
+  () => contractStore.draftContractId,
+  (newId) => {
+    if (newId && currentStep.value === 1) {
+      currentStep.value = 2
+    }
+  },
+  { immediate: true }
+)
+
 // 步骤1完成后的回调
 const handleStep1Complete = (
   templateFileName: string,
   templatePath: string,
+  templateChecksum: string,
   markItems: MarkItem[]
 ) => {
-  contractStore.createNewDraft(templateFileName, templatePath, markItems)
+  contractStore.createNewDraft(templateFileName, templatePath, templateChecksum, markItems)
   currentStep.value = 2
 }
 
@@ -38,27 +49,22 @@ const handleProceedToStep3 = () => {
 }
 
 // 步骤3完成后的回调
-const handleStep3Complete = (contractName: string, description?: string) => {
+const handleStep3Complete = async (contractName: string, description?: string) => {
   if (!contractStore.contractDraft) return
 
-  // 创建新契约
-  const newContract = {
-    id: `contract-${Date.now()}`,
-    name: contractName,
-    description: description || '',
-    templatePath: contractStore.contractDraft.templatePath,
-    templateFileName: contractStore.contractDraft.templateFileName,
-    dataSources: contractStore.contractDraft.dataSources,
-    bindings: contractStore.contractDraft.bindings,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  const normalizedDescription = description && description.length > 0 ? description : undefined
+
+  try {
+    await contractStore.saveContract({
+      name: contractName,
+      description: normalizedDescription
+    })
+    contractStore.clearDraft()
+    router.push('/')
+  } catch (error) {
+    console.error('保存报表契约失败', error)
+    alert('保存报表契约失败，请稍后再试。')
   }
-
-  contractStore.saveContract(newContract)
-  contractStore.clearDraft()
-
-  // 返回到 Dashboard
-  router.push('/')
 }
 
 // 取消创建
@@ -182,9 +188,9 @@ const handlePrevStep = () => {
         <!-- 步骤2: 配置契约 -->
         <Step2ConfigureContract
           v-if="currentStep === 2"
+          :can-proceed="canProceedToStep3"
           @prev="handlePrevStep"
           @next="handleProceedToStep3"
-          :can-proceed="canProceedToStep3"
         />
 
         <!-- 步骤3: 测试与保存 -->

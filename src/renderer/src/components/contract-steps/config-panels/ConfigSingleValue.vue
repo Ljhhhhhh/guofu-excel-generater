@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import Input from '../../ui/Input.vue'
 import Button from '../../ui/Button.vue'
-import type { DataSource, SingleValueBinding } from '../../../types/contract'
+import type { DataSource, SingleValueBinding } from '@shared/types/contract'
 
 interface Props {
   mark: string
@@ -56,7 +56,7 @@ const handleSave = () => {
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">-- 请选择 --</option>
-          <option v-for="ds in dataSources" :key="ds.id" :value="ds.name">
+          <option v-for="ds in dataSources" :key="ds.id" :value="ds.id">
             {{ ds.name }}
           </option>
         </select>

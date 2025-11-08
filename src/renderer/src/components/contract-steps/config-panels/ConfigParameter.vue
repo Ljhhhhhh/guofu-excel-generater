@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import Input from '../../ui/Input.vue'
 import Button from '../../ui/Button.vue'
-import type { ParameterDefinition } from '../../../types/contract'
+import type { ParameterDefinition } from '@shared/types/contract'
 
 interface Props {
   mark: string

@@ -5,6 +5,8 @@ import { useContractStore } from '../stores/contract'
 import Button from '../components/ui/Button.vue'
 import Card from '../components/ui/Card.vue'
 import RunReportModal from '../components/RunReportModal.vue'
+import type { RuntimeDataSourceFile, RuntimeParameterValue } from '@shared/types/contract'
+import type { RuntimeSession } from '@shared/types/runtime'
 
 const router = useRouter()
 const contractStore = useContractStore()
@@ -29,9 +31,14 @@ const handleEditContract = (contractId: string) => {
   router.push(`/edit/${contractId}`)
 }
 
-const handleDeleteContract = (contractId: string) => {
+const handleDeleteContract = async (contractId: string) => {
   if (confirm('确定要删除此报表契约吗？')) {
-    contractStore.deleteContract(contractId)
+    try {
+      await contractStore.deleteContract(contractId)
+    } catch (error) {
+      console.error('删除契约失败', error)
+      alert('删除契约失败，请稍后再试。')
+    }
   }
 }
 
@@ -40,7 +47,13 @@ const handleCloseRunModal = () => {
   selectedContractId.value = null
 }
 
-const handleGenerate = (data: any) => {
+type RunPayload = {
+  parameters: RuntimeParameterValue[]
+  dataFiles: RuntimeDataSourceFile[]
+  runtimeSession: RuntimeSession | null
+}
+
+const handleGenerate = (data: RunPayload) => {
   console.log('生成报表:', data)
   // 实际实现: await window.api.generateReport(selectedContractId.value, data)
   alert('报表生成成功！（模拟）')
@@ -137,17 +150,49 @@ const handleGenerate = (data: any) => {
                     </div>
                     <div class="ml-4">
                       <button
-                        @click="handleDeleteContract(contract.id)"
-                        class="text-gray-400 hover:text-red-600 transition-colors"
+                        :class="[
+                          'text-gray-400 transition-colors flex items-center justify-center',
+                          contractStore.isDeletingContract(contract.id)
+                            ? 'cursor-not-allowed opacity-50'
+                            : 'hover:text-red-600'
+                        ]"
                         title="删除"
+                        :disabled="contractStore.isDeletingContract(contract.id)"
+                        @click="handleDeleteContract(contract.id)"
                       >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          v-if="!contractStore.isDeletingContract(contract.id)"
+                          class="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                           />
+                        </svg>
+                        <svg
+                          v-else
+                          class="w-5 h-5 animate-spin text-red-600"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          ></circle>
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                       </button>
                     </div>

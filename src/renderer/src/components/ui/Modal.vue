@@ -1,6 +1,6 @@
 <script setup lang="ts">
 interface Props {
-  show: boolean
+  show?: boolean
   title?: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }
@@ -61,8 +61,8 @@ const handleBackdropClick = (e: MouseEvent) => {
                 <h3 class="text-xl font-semibold text-gray-900">{{ title }}</h3>
               </slot>
               <button
-                @click="emit('close')"
                 class="text-gray-400 hover:text-gray-600 transition-colors"
+                @click="emit('close')"
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path

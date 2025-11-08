@@ -5,7 +5,7 @@ export type MarkType = 'single' | 'list' | 'parameter'
 export interface SingleValueBinding {
   type: 'single'
   mark: string // 例如: "d.company_name"
-  dataSource: string // 数据源名称
+  dataSource: string // 数据源 ID
   sheetName: string // 工作表名称
   cellCoordinate: string // 单元格坐标,例如: "E5"
   dataType?: 'auto' | 'text' | 'number' | 'date'
@@ -21,7 +21,7 @@ export interface FieldMapping {
 export interface ListBinding {
   type: 'list'
   mark: string // 例如: "d.users[]"
-  dataSource: string
+  dataSource: string // 数据源 ID
   sheetName: string
   rangeMethod: 'header' | 'fixed' | 'column' // 数据范围方法
   headerRow?: number // 表头行号(rangeMethod='header'时)
@@ -64,10 +64,33 @@ export interface ReportContract {
   description?: string
   templatePath: string
   templateFileName: string
+  templateChecksum: string
   dataSources: DataSource[]
   bindings: DataBinding[]
   createdAt: string
   updatedAt: string
+}
+
+// 渲染流程中待保存的契约草稿
+export interface ContractDraftPayload {
+  templatePath: string
+  templateFileName: string
+  templateChecksum: string
+  dataSources: DataSource[]
+  bindings: DataBinding[]
+}
+
+// 创建契约时发送给主进程的载荷
+export interface CreateContractPayload extends ContractDraftPayload {
+  id?: string
+  name: string
+  description?: string
+}
+
+export interface UpdateContractPayload extends ContractDraftPayload {
+  id: string
+  name: string
+  description?: string
 }
 
 // 运行时参数值
@@ -80,5 +103,7 @@ export interface RuntimeParameterValue {
 export interface RuntimeDataSourceFile {
   dataSourceId: string
   dataSourceName: string
-  file: File | null
+  uploaded: boolean
+  fileName?: string
+  checksum?: string
 }

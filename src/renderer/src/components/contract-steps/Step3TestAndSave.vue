@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useContractStore } from '../../stores/contract'
 import Card from '../ui/Card.vue'
 import Button from '../ui/Button.vue'
 import Input from '../ui/Input.vue'
 import FileUpload from '../ui/FileUpload.vue'
-import type { RuntimeParameterValue, RuntimeDataSourceFile } from '../../types/contract'
+import type { RuntimeParameterValue, RuntimeDataSourceFile } from '@shared/types/contract'
+import type { RuntimeSession } from '@shared/types/runtime'
+import type { SelectedFile } from '@shared/types/file'
 
 const emit = defineEmits<{
   (e: 'prev'): void
@@ -35,27 +37,88 @@ const parameterValues = ref<RuntimeParameterValue[]>(
   })
 )
 
-// 数据源文件
-const dataSourceFiles = ref<RuntimeDataSourceFile[]>(
-  draft.value?.dataSources.map((ds) => ({
-    dataSourceId: ds.id,
-    dataSourceName: ds.name,
-    file: null
-  })) || []
+const dataSourceFiles = ref<RuntimeDataSourceFile[]>([])
+
+const syncDataSourceFiles = () => {
+  const sources = draft.value?.dataSources ?? []
+  const currentMap = new Map(dataSourceFiles.value.map((item) => [item.dataSourceId, item]))
+  dataSourceFiles.value = sources.map((ds) => {
+    const existing = currentMap.get(ds.id)
+    return (
+      existing ?? {
+        dataSourceId: ds.id,
+        dataSourceName: ds.name,
+        uploaded: false
+      }
+    )
+  })
+}
+
+watch(
+  () => draft.value?.dataSources.map((ds) => ({ id: ds.id, name: ds.name })),
+  () => {
+    syncDataSourceFiles()
+  },
+  { immediate: true, deep: true }
 )
 
 // 是否可以运行测试
-const canRunTest = computed(() => {
-  return dataSourceFiles.value.every((df) => df.file !== null)
-})
+const canRunTest = computed(() => dataSourceFiles.value.every((df) => df.uploaded))
 
 const isTestRunning = ref(false)
 const testResult = ref<'idle' | 'success' | 'error'>('idle')
 const testErrorMessage = ref('')
+const isSaving = computed(() => contractStore.isSaving)
+const runtimeSession = ref<RuntimeSession | null>(null)
+const runtimeError = ref<string | null>(null)
+const excelFilters = [{ name: 'Excel 文件', extensions: ['xlsx', 'xls'] }]
+
+const ensureRuntimeSession = async () => {
+  if (!window.api?.runtime?.createSession) {
+    runtimeError.value = '主进程未暴露 runtime API'
+    return null
+  }
+  try {
+    const scope = contractStore.getRuntimeScope()
+    const session = await window.api.runtime.createSession({
+      ...scope,
+      sessionType: 'test'
+    })
+    runtimeSession.value = session
+    runtimeError.value = null
+    return session
+  } catch (error) {
+    runtimeError.value = error instanceof Error ? error.message : String(error)
+    return null
+  }
+}
+
+const cleanupRuntimeSession = async () => {
+  if (!runtimeSession.value || !window.api?.runtime?.cleanupSession) return
+  try {
+    await window.api.runtime.cleanupSession(runtimeSession.value)
+  } catch (error) {
+    console.warn('清理测试运行会话失败', error)
+  } finally {
+    runtimeSession.value = null
+  }
+}
+
+onMounted(() => {
+  void ensureRuntimeSession()
+})
+
+onBeforeUnmount(() => {
+  void cleanupRuntimeSession()
+})
 
 // 运行测试
 const handleRunTest = async () => {
   if (!canRunTest.value) return
+  if (!runtimeSession.value) {
+    await ensureRuntimeSession()
+    if (!runtimeSession.value) return
+  }
 
   isTestRunning.value = true
   testResult.value = 'idle'
@@ -70,10 +133,35 @@ const handleRunTest = async () => {
 }
 
 // 文件上传处理
-const handleFileUpload = (dataSourceId: string, file: File) => {
+const handleFileUpload = async (dataSourceId: string, file: SelectedFile | SelectedFile[]) => {
   const dsFile = dataSourceFiles.value.find((df) => df.dataSourceId === dataSourceId)
-  if (dsFile) {
-    dsFile.file = file
+  if (!dsFile) return
+
+  const targetFile = Array.isArray(file) ? file[0] : file
+  if (!targetFile) return
+
+  const session = runtimeSession.value ?? (await ensureRuntimeSession())
+  if (!session) return
+
+  if (!window.api?.runtime?.storeDataSourceFile) {
+    runtimeError.value = '主进程未暴露 runtime 存储 API'
+    return
+  }
+
+  try {
+    const stored = await window.api.runtime.storeDataSourceFile({
+      scopeId: session.scopeId,
+      scopeType: session.scopeType,
+      sessionType: session.sessionType,
+      sessionId: session.sessionId,
+      dataSourceId,
+      sourcePath: targetFile.path
+    })
+    dsFile.uploaded = true
+    dsFile.fileName = stored.fileName
+    dsFile.checksum = stored.checksum
+  } catch (error) {
+    runtimeError.value = error instanceof Error ? error.message : String(error)
   }
 }
 
@@ -135,9 +223,17 @@ const handleSave = () => {
           <div v-for="dsFile in dataSourceFiles" :key="dsFile.dataSourceId" class="space-y-2">
             <FileUpload
               :label="dsFile.dataSourceName"
-              @upload="(file) => handleFileUpload(dsFile.dataSourceId, file as File)"
+              :filters="excelFilters"
+              @select="(file) => handleFileUpload(dsFile.dataSourceId, file)"
             />
+            <p v-if="dsFile.uploaded" class="text-xs text-green-600">
+              已上传：{{ dsFile.fileName }} {{ dsFile.checksum ? `(${dsFile.checksum.slice(0, 8)}···)` : '' }}
+            </p>
           </div>
+        </div>
+
+        <div v-if="runtimeError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p class="text-sm text-red-800">{{ runtimeError }}</p>
         </div>
 
         <!-- 运行测试按钮 -->
@@ -211,8 +307,26 @@ const handleSave = () => {
         </div>
 
         <div class="flex justify-between pt-4">
-          <Button variant="outline" @click="emit('prev')"> 上一步 </Button>
-          <Button variant="primary" size="lg" @click="handleSave"> 保存报表契约 </Button>
+          <Button variant="outline" :disabled="isSaving" @click="emit('prev')"> 上一步 </Button>
+          <div class="flex items-center gap-3">
+            <svg
+              v-if="isSaving"
+              class="animate-spin h-5 w-5 text-blue-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <Button variant="primary" size="lg" :disabled="isSaving" @click="handleSave">
+              {{ isSaving ? '保存中...' : '保存报表契约' }}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

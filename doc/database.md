@@ -1,6 +1,6 @@
 # 数据库方案
 
-本项目需要在 Electron 主进程中持久化“报表契约”及其关联配置。根据 `src/renderer/src/types/contract.ts`
+本项目需要在 Electron 主进程中持久化“报表契约”及其关联配置。根据 `src/shared/types/contract.ts`
 里的类型定义以及《doc/doc.md》的交互规范，数据库需要覆盖以下信息：
 
 - **报表契约 (`ReportContract`)：** 契约元信息与模板文件引用。
@@ -35,6 +35,7 @@
 | `description` | TEXT | 描述。 |
 | `template_path` | TEXT | 模板在磁盘中的绝对路径。 |
 | `template_file_name` | TEXT | 原始文件名。 |
+| `template_checksum` | TEXT | 模板文件的 SHA-256 校验值，用于变更检测与去重。 |
 | `created_at` / `updated_at` | TEXT | ISO 时间字符串。 |
 
 ### 2.2 `data_sources`

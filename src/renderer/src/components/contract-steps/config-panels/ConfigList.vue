@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import Input from '../../ui/Input.vue'
 import Button from '../../ui/Button.vue'
-import type { DataSource, ListBinding, FieldMapping } from '../../../types/contract'
+import type { DataSource, ListBinding } from '@shared/types/contract'
 
 interface Props {
   mark: string
@@ -20,23 +20,7 @@ const sheetName = ref('')
 const rangeMethod = ref<'header' | 'fixed' | 'column'>('header')
 const headerRow = ref<number>(1)
 const dataStartRow = ref<number>(2)
-
-// 模拟从标记解析出的字段
-const mockFields = computed(() => {
-  // 实际实现: 从 mark 中解析 item.xxx
-  if (props.mark.includes('users')) {
-    return ['item.name', 'item.email']
-  }
-  return []
-})
-
-// 字段映射
-const fieldMappings = ref<FieldMapping[]>(
-  mockFields.value.map((field) => ({
-    fieldName: field,
-    headerText: ''
-  }))
-)
+const headerName = ref('')
 
 const handleSave = () => {
   if (!selectedDataSource.value || !sheetName.value) {
@@ -44,10 +28,22 @@ const handleSave = () => {
     return
   }
 
-  if (rangeMethod.value === 'header' && fieldMappings.value.some((fm) => !fm.headerText)) {
-    alert('请填写所有字段映射')
+  if (rangeMethod.value === 'header' && !headerName.value.trim()) {
+    alert('请填写表头名')
     return
   }
+
+  const normalizedFieldName = deriveFieldName(props.mark)
+  const normalizedHeaderName = headerName.value.trim()
+  const normalizedMappings =
+    rangeMethod.value === 'header'
+      ? [
+          {
+            fieldName: normalizedFieldName,
+            headerText: normalizedHeaderName
+          }
+        ]
+      : undefined
 
   const binding: ListBinding = {
     type: 'list',
@@ -57,10 +53,18 @@ const handleSave = () => {
     rangeMethod: rangeMethod.value,
     headerRow: headerRow.value,
     dataStartRow: dataStartRow.value,
-    fieldMappings: fieldMappings.value
+    fieldMappings: normalizedMappings
   }
 
   emit('save', binding)
+  headerName.value = ''
+}
+
+function deriveFieldName(mark: string): string {
+  return mark
+    .replace(/^d\./, '')
+    .replace(/\[.*?\]/g, '')
+    .trim()
 }
 </script>
 
@@ -81,7 +85,7 @@ const handleSave = () => {
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">-- 请选择 --</option>
-          <option v-for="ds in dataSources" :key="ds.id" :value="ds.name">
+          <option v-for="ds in dataSources" :key="ds.id" :value="ds.id">
             {{ ds.name }}
           </option>
         </select>
@@ -126,25 +130,11 @@ const handleSave = () => {
 
         <!-- 字段映射 -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            (b) 绑定字段与"列名（表头文本）"
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-2"> (b) 表头名 </label>
           <p class="text-xs text-gray-600 mb-3">
-            模板 <code>{{ mark }}</code> 包含以下字段 (自动解析):
+            当前标记 <code>{{ mark }}</code> 将匹配此表头所在的列，请输入 Excel 中的表头文本。
           </p>
-
-          <div class="space-y-3">
-            <div
-              v-for="(fm, index) in fieldMappings"
-              :key="fm.fieldName"
-              class="grid grid-cols-2 gap-3"
-            >
-              <div class="text-sm font-mono text-gray-600 py-2">
-                {{ fm.fieldName }}
-              </div>
-              <Input v-model="fieldMappings[index].headerText" placeholder="例如: 姓名" required />
-            </div>
-          </div>
+          <Input v-model="headerName" placeholder="例如: 姓名" required />
         </div>
 
         <!-- 数据起始行 -->

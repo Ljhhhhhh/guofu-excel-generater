@@ -246,7 +246,7 @@
 
 ### 6. 类型定义
 
-**核心类型** (`types/contract.ts`):
+**核心类型** (`src/shared/types/contract.ts`):
 
 - `MarkType` - 标记类型枚举
 - `SingleValueBinding` - 单个值绑定配置

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useContractStore } from '../stores/contract'
 import Modal from './ui/Modal.vue'
 import Button from './ui/Button.vue'
 import Input from './ui/Input.vue'
 import FileUpload from './ui/FileUpload.vue'
-import type { RuntimeParameterValue, RuntimeDataSourceFile } from '../types/contract'
+import type { RuntimeParameterValue, RuntimeDataSourceFile } from '@shared/types/contract'
+import type { RuntimeSession } from '@shared/types/runtime'
+import type { SelectedFile } from '@shared/types/file'
 
 interface Props {
   show: boolean
@@ -17,7 +19,11 @@ const emit = defineEmits<{
   (e: 'close'): void
   (
     e: 'generate',
-    data: { parameters: RuntimeParameterValue[]; dataFiles: RuntimeDataSourceFile[] }
+    data: {
+      parameters: RuntimeParameterValue[]
+      dataFiles: RuntimeDataSourceFile[]
+      runtimeSession: RuntimeSession | null
+    }
   ): void
 }>()
 
@@ -25,8 +31,28 @@ const contractStore = useContractStore()
 
 // 运行时参数值
 const parameterValues = ref<RuntimeParameterValue[]>([])
-// 数据源文件
 const dataSourceFiles = ref<RuntimeDataSourceFile[]>([])
+const runtimeSession = ref<RuntimeSession | null>(null)
+const runtimeError = ref<string | null>(null)
+const excelFilters = [{ name: 'Excel 文件', extensions: ['xlsx', 'xls'] }]
+
+const resetDataSourceFiles = () => {
+  if (!contract.value) {
+    dataSourceFiles.value = []
+    return
+  }
+  const currentMap = new Map(dataSourceFiles.value.map((item) => [item.dataSourceId, item]))
+  dataSourceFiles.value = contract.value.dataSources.map((ds) => {
+    const existing = currentMap.get(ds.id)
+    return (
+      existing ?? {
+        dataSourceId: ds.id,
+        dataSourceName: ds.name,
+        uploaded: false
+      }
+    )
+  })
+}
 
 // 当前契约
 const contract = computed(() => {
@@ -45,17 +71,29 @@ const parameters = computed(() => {
 const hasParameters = computed(() => parameters.value.length > 0)
 
 // 是否可以生成报表 (所有数据源文件都已上传)
-const canGenerate = computed(() => {
-  return dataSourceFiles.value.every((df) => df.file !== null)
-})
+const canGenerate = computed(() => dataSourceFiles.value.every((df) => df.uploaded))
 
+const disposeRuntimeSession = async () => {
+  if (!runtimeSession.value || !window.api?.runtime?.cleanupSession) {
+    runtimeSession.value = null
+    return
+  }
+  try {
+    await window.api.runtime.cleanupSession(runtimeSession.value)
+  } catch (error) {
+    console.warn('清理运行会话失败', error)
+  } finally {
+    runtimeSession.value = null
+  }
+}
 // 监听契约变化,初始化表单
 watch(
   () => props.contractId,
-  (newId) => {
+  async (newId, oldId) => {
+    if (newId !== oldId) {
+      await disposeRuntimeSession()
+    }
     if (!newId || !contract.value) return
-
-    // 初始化参数值
     parameterValues.value = parameters.value.map((p) => {
       if (p.type !== 'parameter') return { mark: '', value: '' }
       return {
@@ -63,21 +101,83 @@ watch(
         value: p.defaultValue || ''
       }
     })
-
-    // 初始化数据源文件列表
-    dataSourceFiles.value = contract.value.dataSources.map((ds) => ({
-      dataSourceId: ds.id,
-      dataSourceName: ds.name,
-      file: null
-    }))
+    resetDataSourceFiles()
+    if (props.show) {
+      await ensureRuntimeSession()
+    }
   },
   { immediate: true }
 )
 
-const handleFileUpload = (dataSourceId: string, file: File) => {
+watch(
+  () => contract.value?.dataSources.map((ds) => ({ id: ds.id, name: ds.name })),
+  () => {
+    resetDataSourceFiles()
+  },
+  { deep: true }
+)
+
+watch(
+  () => props.show,
+  async (show) => {
+    if (show) {
+      await ensureRuntimeSession()
+    } else {
+      await disposeRuntimeSession()
+    }
+  }
+)
+
+const ensureRuntimeSession = async () => {
+  if (!props.contractId) return null
+  if (!window.api?.runtime?.createSession) {
+    runtimeError.value = '主进程未暴露 runtime API'
+    return null
+  }
+  try {
+    const session = await window.api.runtime.createSession({
+      scopeId: props.contractId,
+      scopeType: 'contract',
+      sessionType: 'run'
+    })
+    runtimeSession.value = session
+    runtimeError.value = null
+    return session
+  } catch (error) {
+    runtimeError.value = error instanceof Error ? error.message : String(error)
+    return null
+  }
+}
+
+onBeforeUnmount(() => {
+  void disposeRuntimeSession()
+})
+
+const handleFileUpload = async (dataSourceId: string, file: SelectedFile | SelectedFile[]) => {
   const dsFile = dataSourceFiles.value.find((df) => df.dataSourceId === dataSourceId)
-  if (dsFile) {
-    dsFile.file = file
+  if (!dsFile) return
+  const selected = Array.isArray(file) ? file[0] : file
+  if (!selected) return
+  const session = runtimeSession.value ?? (await ensureRuntimeSession())
+  if (!session) return
+  if (!window.api?.runtime?.storeDataSourceFile) {
+    runtimeError.value = '主进程未暴露 runtime 存储 API'
+    return
+  }
+  try {
+    const stored = await window.api.runtime.storeDataSourceFile({
+      scopeId: session.scopeId,
+      scopeType: session.scopeType,
+      sessionType: session.sessionType,
+      sessionId: session.sessionId,
+      dataSourceId,
+      sourcePath: selected.path
+    })
+    dsFile.uploaded = true
+    dsFile.fileName = stored.fileName
+    dsFile.checksum = stored.checksum
+  } catch (error) {
+    runtimeError.value = error instanceof Error ? error.message : String(error)
   }
 }
 
@@ -86,11 +186,13 @@ const handleGenerate = () => {
 
   emit('generate', {
     parameters: parameterValues.value,
-    dataFiles: dataSourceFiles.value
+    dataFiles: dataSourceFiles.value,
+    runtimeSession: runtimeSession.value
   })
 }
 
 const handleClose = () => {
+  void disposeRuntimeSession()
   emit('close')
 }
 </script>
@@ -141,9 +243,15 @@ const handleClose = () => {
         <div v-for="dsFile in dataSourceFiles" :key="dsFile.dataSourceId" class="space-y-2">
           <FileUpload
             :label="dsFile.dataSourceName"
-            @upload="(file) => handleFileUpload(dsFile.dataSourceId, file as File)"
+            :filters="excelFilters"
+            @select="(file) => handleFileUpload(dsFile.dataSourceId, file)"
           />
+          <p v-if="dsFile.uploaded" class="text-xs text-green-600">已上传：{{ dsFile.fileName }}</p>
         </div>
+      </div>
+
+      <div v-if="runtimeError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-sm text-red-800">{{ runtimeError }}</p>
       </div>
     </div>
 
