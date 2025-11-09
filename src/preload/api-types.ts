@@ -13,6 +13,11 @@ import type {
   RuntimeScopeDescriptor
 } from '@shared/types/runtime'
 import type { OpenFileDialogOptions, SelectedFile } from '@shared/types/file'
+import type {
+  ReportRunOptions,
+  ContractTestPayload,
+  ReportRunResult
+} from '@shared/types/reportRunner'
 
 export interface ContractsAPI {
   list(): Promise<ReportContract[]>
@@ -20,6 +25,8 @@ export interface ContractsAPI {
   create(payload: CreateContractPayload): Promise<ReportContract>
   update(payload: UpdateContractPayload): Promise<ReportContract>
   delete(id: string): Promise<void>
+  run(payload: ReportRunOptions): Promise<ReportRunResult>
+  test(payload: ContractTestPayload): Promise<ReportRunResult>
 }
 
 export interface TemplatesAPI {

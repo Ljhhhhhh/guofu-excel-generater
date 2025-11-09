@@ -5,9 +5,6 @@ import { useContractStore } from '../stores/contract'
 import Button from '../components/ui/Button.vue'
 import Card from '../components/ui/Card.vue'
 import RunReportModal from '../components/RunReportModal.vue'
-import type { RuntimeDataSourceFile, RuntimeParameterValue } from '@shared/types/contract'
-import type { RuntimeSession } from '@shared/types/runtime'
-
 const router = useRouter()
 const contractStore = useContractStore()
 
@@ -45,19 +42,6 @@ const handleDeleteContract = async (contractId: string) => {
 const handleCloseRunModal = () => {
   showRunModal.value = false
   selectedContractId.value = null
-}
-
-type RunPayload = {
-  parameters: RuntimeParameterValue[]
-  dataFiles: RuntimeDataSourceFile[]
-  runtimeSession: RuntimeSession | null
-}
-
-const handleGenerate = (data: RunPayload) => {
-  console.log('生成报表:', data)
-  // 实际实现: await window.api.generateReport(selectedContractId.value, data)
-  alert('报表生成成功！（模拟）')
-  handleCloseRunModal()
 }
 </script>
 
@@ -293,7 +277,6 @@ const handleGenerate = (data: RunPayload) => {
       :show="showRunModal"
       :contract-id="selectedContractId"
       @close="handleCloseRunModal"
-      @generate="handleGenerate"
     />
   </div>
 </template>

@@ -8,6 +8,7 @@ import FileUpload from './ui/FileUpload.vue'
 import type { RuntimeParameterValue, RuntimeDataSourceFile } from '@shared/types/contract'
 import type { RuntimeSession } from '@shared/types/runtime'
 import type { SelectedFile } from '@shared/types/file'
+import type { ReportRunResult } from '@shared/types/reportRunner'
 
 interface Props {
   show: boolean
@@ -17,14 +18,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (
-    e: 'generate',
-    data: {
-      parameters: RuntimeParameterValue[]
-      dataFiles: RuntimeDataSourceFile[]
-      runtimeSession: RuntimeSession | null
-    }
-  ): void
+  (e: 'success', payload: { contractId: string; result: ReportRunResult }): void
 }>()
 
 const contractStore = useContractStore()
@@ -35,6 +29,16 @@ const dataSourceFiles = ref<RuntimeDataSourceFile[]>([])
 const runtimeSession = ref<RuntimeSession | null>(null)
 const runtimeError = ref<string | null>(null)
 const excelFilters = [{ name: 'Excel 文件', extensions: ['xlsx', 'xls'] }]
+const isGenerating = ref(false)
+const runResult = ref<ReportRunResult | null>(null)
+const runError = ref<string | null>(null)
+const copyFeedback = ref<string | null>(null)
+
+const resetRunState = () => {
+  runResult.value = null
+  runError.value = null
+  copyFeedback.value = null
+}
 
 const resetDataSourceFiles = () => {
   if (!contract.value) {
@@ -92,6 +96,7 @@ watch(
   async (newId, oldId) => {
     if (newId !== oldId) {
       await disposeRuntimeSession()
+      resetRunState()
     }
     if (!newId || !contract.value) return
     parameterValues.value = parameters.value.map((p) => {
@@ -123,6 +128,7 @@ watch(
     if (show) {
       await ensureRuntimeSession()
     } else {
+      resetRunState()
       await disposeRuntimeSession()
     }
   }
@@ -183,18 +189,65 @@ const handleFileUpload = async (dataSourceId: string, file: SelectedFile | Selec
 
 const handleGenerate = () => {
   if (!canGenerate.value) return
+  void runReport()
+}
 
-  emit('generate', {
-    parameters: parameterValues.value,
-    dataFiles: dataSourceFiles.value,
-    runtimeSession: runtimeSession.value
-  })
+const runReport = async () => {
+  if (!props.contractId) return
+  const session = runtimeSession.value ?? (await ensureRuntimeSession())
+  if (!session) return
+  if (!window.api?.contracts?.run) {
+    runtimeError.value = 'contracts API 未注册 run 方法'
+    return
+  }
+  isGenerating.value = true
+  runError.value = null
+  copyFeedback.value = null
+  try {
+    const result = await window.api.contracts.run({
+      contractId: props.contractId,
+      runtimeSession: session,
+      parameterValues: parameterValues.value,
+      dataSourceFiles: dataSourceFiles.value
+    })
+    runResult.value = result
+    emit('success', { contractId: props.contractId, result })
+  } catch (error) {
+    runError.value = error instanceof Error ? error.message : String(error)
+    runResult.value = null
+  } finally {
+    isGenerating.value = false
+  }
+}
+
+const handleCopyOutputPath = async () => {
+  if (!runResult.value?.outputPath) return
+  if (!navigator?.clipboard?.writeText) {
+    copyFeedback.value = '当前环境不支持复制，请手动复制路径。'
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(runResult.value.outputPath)
+    copyFeedback.value = '已复制到剪贴板'
+    setTimeout(() => {
+      copyFeedback.value = null
+    }, 2_000)
+  } catch (error) {
+    copyFeedback.value = error instanceof Error ? error.message : '复制失败'
+  }
 }
 
 const handleClose = () => {
+  resetRunState()
   void disposeRuntimeSession()
   emit('close')
 }
+
+const generateButtonLabel = computed(() => {
+  if (isGenerating.value) return '生成中...'
+  if (runResult.value) return '重新生成'
+  return '生成报表'
+})
 </script>
 
 <template>
@@ -250,6 +303,27 @@ const handleClose = () => {
         </div>
       </div>
 
+      <div v-if="runResult" class="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+        <p class="text-sm text-green-800">
+          报表生成成功，用时 {{ (runResult.durationMs / 1000).toFixed(1) }} 秒，输出格式为
+          {{ runResult.outputFormat.toUpperCase() }}。
+        </p>
+        <div class="space-y-2">
+          <p class="text-xs text-gray-600">输出文件路径</p>
+          <div class="flex items-center gap-3">
+            <code class="text-xs text-gray-800 break-all bg-white/80 px-2 py-1 rounded border border-green-100 flex-1">
+              {{ runResult.outputPath }}
+            </code>
+            <Button variant="outline" size="sm" @click="handleCopyOutputPath">复制路径</Button>
+          </div>
+          <p v-if="copyFeedback" class="text-xs text-gray-500">{{ copyFeedback }}</p>
+        </div>
+      </div>
+
+      <div v-if="runError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-sm text-red-800">报表生成失败：{{ runError }}</p>
+      </div>
+
       <div v-if="runtimeError" class="bg-red-50 border border-red-200 rounded-lg p-4">
         <p class="text-sm text-red-800">{{ runtimeError }}</p>
       </div>
@@ -258,8 +332,12 @@ const handleClose = () => {
     <template #footer>
       <div class="flex justify-end gap-3">
         <Button variant="outline" @click="handleClose">取消</Button>
-        <Button variant="primary" :disabled="!canGenerate" @click="handleGenerate">
-          生成报表
+        <Button
+          variant="primary"
+          :disabled="!canGenerate || isGenerating"
+          @click="handleGenerate"
+        >
+          {{ generateButtonLabel }}
         </Button>
       </div>
     </template>

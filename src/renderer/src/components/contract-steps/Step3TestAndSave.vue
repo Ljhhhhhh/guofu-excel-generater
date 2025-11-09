@@ -5,7 +5,11 @@ import Card from '../ui/Card.vue'
 import Button from '../ui/Button.vue'
 import Input from '../ui/Input.vue'
 import FileUpload from '../ui/FileUpload.vue'
-import type { RuntimeParameterValue, RuntimeDataSourceFile } from '@shared/types/contract'
+import type {
+  RuntimeParameterValue,
+  RuntimeDataSourceFile,
+  ContractDraftPayload
+} from '@shared/types/contract'
 import type { RuntimeSession } from '@shared/types/runtime'
 import type { SelectedFile } from '@shared/types/file'
 
@@ -68,6 +72,7 @@ const canRunTest = computed(() => dataSourceFiles.value.every((df) => df.uploade
 const isTestRunning = ref(false)
 const testResult = ref<'idle' | 'success' | 'error'>('idle')
 const testErrorMessage = ref('')
+const testOutputPath = ref<string | null>(null)
 const isSaving = computed(() => contractStore.isSaving)
 const runtimeSession = ref<RuntimeSession | null>(null)
 const runtimeError = ref<string | null>(null)
@@ -115,21 +120,46 @@ onBeforeUnmount(() => {
 // 运行测试
 const handleRunTest = async () => {
   if (!canRunTest.value) return
-  if (!runtimeSession.value) {
-    await ensureRuntimeSession()
-    if (!runtimeSession.value) return
+  if (!draft.value) {
+    runtimeError.value = '当前没有可测试的契约草稿'
+    return
+  }
+  const session = runtimeSession.value ?? (await ensureRuntimeSession())
+  if (!session) return
+  if (!window.api?.contracts?.test) {
+    runtimeError.value = 'contracts API 未暴露 test 能力'
+    return
   }
 
   isTestRunning.value = true
   testResult.value = 'idle'
+  testErrorMessage.value = ''
+  testOutputPath.value = null
 
-  // 模拟测试执行
-  // 实际实现: const result = await window.api.testContract(...)
-  await new Promise((resolve) => setTimeout(resolve, 2000))
+  const draftPayload: ContractDraftPayload = {
+    templatePath: draft.value.templatePath,
+    templateFileName: draft.value.templateFileName,
+    templateChecksum: draft.value.templateChecksum,
+    dataSources: draft.value.dataSources,
+    bindings: draft.value.bindings
+  }
 
-  // 模拟成功
-  isTestRunning.value = false
-  testResult.value = 'success'
+  try {
+    const result = await window.api.contracts.test({
+      draft: draftPayload,
+      contractId: contractStore.draftContractId ?? undefined,
+      runtimeSession: session,
+      parameterValues: parameterValues.value,
+      dataSourceFiles: dataSourceFiles.value
+    })
+    testResult.value = 'success'
+    testOutputPath.value = result.outputPath
+  } catch (error) {
+    testResult.value = 'error'
+    testErrorMessage.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    isTestRunning.value = false
+  }
 }
 
 // 文件上传处理
@@ -281,12 +311,14 @@ const handleSave = () => {
         <!-- 测试成功预览 -->
         <div
           v-if="testResult === 'success'"
-          class="bg-green-50 border border-green-200 rounded-lg p-4"
+          class="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2"
         >
-          <p class="text-sm text-green-800 mb-2 font-medium">预览结果：</p>
-          <div class="bg-white rounded border border-green-300 p-4">
-            <p class="text-sm text-gray-600">报表生成成功！（这里会显示生成的报表预览）</p>
-          </div>
+          <p class="text-sm text-green-800 font-medium">测试渲染成功</p>
+          <p class="text-sm text-green-900">
+            输出文件已保存至：
+            <span class="font-semibold break-all">{{ testOutputPath }}</span>
+          </p>
+          <p class="text-xs text-green-700">可在运行会话目录中打开该文件进行人工校验。</p>
         </div>
       </div>
     </Card>

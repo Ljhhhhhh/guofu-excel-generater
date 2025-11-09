@@ -33,7 +33,7 @@ const CLEANUP_RULES: Array<{
   { scopeType: 'contract', sessionType: 'run', maxAgeHours: 720 }
 ]
 
-function getRuntimeRoot(): string {
+export function getRuntimeRoot(): string {
   return join(app.getPath('userData'), 'storage', 'runtime')
 }
 
@@ -48,7 +48,7 @@ export async function createRuntimeSession(
   await ensureRuntimeRoot()
   await cleanupExpiredSessions()
   const sessionId = randomUUID()
-  const sessionPath = resolveSessionPath({ ...payload, sessionId })
+  const sessionPath = resolveRuntimeSessionPath({ ...payload, sessionId })
 
   await fs.mkdir(join(sessionPath, 'data-sources'), { recursive: true })
 
@@ -71,7 +71,7 @@ export async function storeRuntimeDataSourceFile(
   payload: RuntimeStoreDataSourcePayload
 ): Promise<RuntimeStoredDataSourceFile> {
   await ensureRuntimeRoot()
-  const sessionPath = resolveSessionPath(payload)
+  const sessionPath = resolveRuntimeSessionPath(payload)
   await fs.mkdir(sessionPath, { recursive: true })
 
   const dataSourceDir = join(sessionPath, 'data-sources', payload.dataSourceId)
@@ -95,7 +95,7 @@ export async function storeRuntimeDataSourceFile(
 export async function cleanupRuntimeSession(
   payload: RuntimeSessionIdentifier
 ): Promise<void> {
-  const sessionPath = resolveSessionPath(payload)
+  const sessionPath = resolveRuntimeSessionPath(payload)
   await removePath(sessionPath)
 }
 
@@ -113,10 +113,9 @@ function resolveScopeDir(scope: RuntimeScopeDescriptor): string {
   return join(root, SCOPE_DIR_NAME[scope.scopeType], scope.scopeId)
 }
 
-function resolveSessionPath(identifier: RuntimeSessionIdentifier): string {
+export function resolveRuntimeSessionPath(identifier: RuntimeSessionIdentifier): string {
   const scopeDir = resolveScopeDir(identifier)
-  const sessionDir = join(scopeDir, SESSION_DIR_NAME[identifier.sessionType], identifier.sessionId)
-  return sessionDir
+  return join(scopeDir, SESSION_DIR_NAME[identifier.sessionType], identifier.sessionId)
 }
 
 async function calculateChecksum(filePath: string): Promise<string> {

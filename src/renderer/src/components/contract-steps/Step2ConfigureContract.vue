@@ -44,11 +44,14 @@ const selectMark = (mark: MarkItem) => {
   selectedMark.value = mark
 }
 
-// 保存配置
+// 保存配置（只保存到内存中的 store）
 const handleSaveBinding = (binding: DataBinding) => {
+  // 保存到内存中的 contractDraft
   contractStore.updateDraftBinding(binding)
-  // 保存后清除选择,显示提示
+  // 保存后清除选择
   selectedMark.value = null
+  // 可以添加成功提示
+  console.log('配置已保存到内存:', binding.mark)
 }
 
 // 添加数据源

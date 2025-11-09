@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useContractStore } from '../../../stores/contract'
 import Input from '../../ui/Input.vue'
 import Button from '../../ui/Button.vue'
 import type { DataSource, SingleValueBinding } from '@shared/types/contract'
@@ -15,10 +17,46 @@ const emit = defineEmits<{
   (e: 'save', binding: SingleValueBinding): void
 }>()
 
+const contractStore = useContractStore()
+const { contractDraft } = storeToRefs(contractStore)
+
 const selectedDataSource = ref('')
 const sheetName = ref('')
 const cellCoordinate = ref('')
 const dataType = ref<'auto' | 'text' | 'number' | 'date'>('auto')
+
+// 回显：从已保存的binding中加载配置，如果不存在则清空
+const loadExistingBinding = () => {
+  if (!contractDraft.value) return
+
+  const existingBinding = contractDraft.value.bindings.find(
+    (b) => b.mark === props.mark && b.type === 'single'
+  ) as SingleValueBinding | undefined
+
+  if (existingBinding) {
+    // 有配置，回显
+    selectedDataSource.value = existingBinding.dataSource
+    sheetName.value = existingBinding.sheetName
+    cellCoordinate.value = existingBinding.cellCoordinate
+    dataType.value = existingBinding.dataType ?? 'auto'
+  } else {
+    // 无配置，清空表单
+    selectedDataSource.value = ''
+    sheetName.value = ''
+    cellCoordinate.value = ''
+    dataType.value = 'auto'
+  }
+}
+
+// 组件挂载时加载
+onMounted(() => {
+  loadExistingBinding()
+})
+
+// 监听mark变化（用户切换不同的标记时）
+watch(() => props.mark, () => {
+  loadExistingBinding()
+})
 
 const handleSave = () => {
   if (!selectedDataSource.value || !sheetName.value || !cellCoordinate.value) {

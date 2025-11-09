@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useContractStore } from '../../../stores/contract'
 import Input from '../../ui/Input.vue'
 import Button from '../../ui/Button.vue'
 import type { ParameterDefinition } from '@shared/types/contract'
@@ -14,9 +16,43 @@ const emit = defineEmits<{
   (e: 'save', binding: ParameterDefinition): void
 }>()
 
+const contractStore = useContractStore()
+const { contractDraft } = storeToRefs(contractStore)
+
 const displayLabel = ref('')
 const dataType = ref<'text' | 'number' | 'date'>('text')
 const defaultValue = ref('')
+
+// 回显：从已保存的binding中加载配置，如果不存在则清空
+const loadExistingBinding = () => {
+  if (!contractDraft.value) return
+
+  const existingBinding = contractDraft.value.bindings.find(
+    (b) => b.mark === props.mark && b.type === 'parameter'
+  ) as ParameterDefinition | undefined
+
+  if (existingBinding) {
+    // 有配置，回显
+    displayLabel.value = existingBinding.displayLabel
+    dataType.value = existingBinding.dataType
+    defaultValue.value = existingBinding.defaultValue ?? ''
+  } else {
+    // 无配置，清空表单
+    displayLabel.value = ''
+    dataType.value = 'text'
+    defaultValue.value = ''
+  }
+}
+
+// 组件挂载时加载
+onMounted(() => {
+  loadExistingBinding()
+})
+
+// 监听mark变化（用户切换不同的标记时）
+watch(() => props.mark, () => {
+  loadExistingBinding()
+})
 
 const handleSave = () => {
   if (!displayLabel.value) {

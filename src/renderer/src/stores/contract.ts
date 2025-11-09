@@ -272,7 +272,10 @@ export const useContractStore = defineStore('contract', () => {
     return ''
   }
 
-  function resolveDataSourceName(dataSourceId: string | undefined, dataSources?: DataSource[]): string {
+  function resolveDataSourceName(
+    dataSourceId: string | undefined,
+    dataSources?: DataSource[]
+  ): string {
     if (!dataSourceId) return ''
     const sources = dataSources ?? contractDraft.value?.dataSources ?? []
     const found = sources.find((ds) => ds.id === dataSourceId)

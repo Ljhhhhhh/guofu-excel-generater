@@ -9,7 +9,9 @@ const api: AppAPI = {
     get: (id: string) => ipcRenderer.invoke('contracts:get', id),
     create: (payload) => ipcRenderer.invoke('contracts:create', payload),
     update: (payload) => ipcRenderer.invoke('contracts:update', payload),
-    delete: (id: string) => ipcRenderer.invoke('contracts:delete', id)
+    delete: (id: string) => ipcRenderer.invoke('contracts:delete', id),
+    run: (payload) => ipcRenderer.invoke('contracts:run', payload),
+    test: (payload) => ipcRenderer.invoke('contracts:test', payload)
   },
   templates: {
     store: (sourcePath: string) => ipcRenderer.invoke('templates:store', sourcePath),
