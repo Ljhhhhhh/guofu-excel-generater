@@ -1,5 +1,6 @@
 // 数据标记类型
 export type MarkType = 'single' | 'list' | 'parameter'
+export type MarkResolutionType = 'binding' | 'skip'
 
 // 单个值绑定
 export interface SingleValueBinding {
