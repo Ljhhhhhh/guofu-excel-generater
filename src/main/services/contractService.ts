@@ -8,7 +8,8 @@ import type {
   FieldMapping,
   CreateContractPayload,
   UpdateContractPayload,
-  DataBinding
+  DataBinding,
+  MarkType
 } from '@shared/types/contract'
 import { getDatabase } from '../database'
 import { deleteTemplateFile } from './templateStorageService'
@@ -72,6 +73,15 @@ type ParameterDefinitionRow = {
   default_value: string | null
 }
 
+type MarkBindingOverrideRow = {
+  id: string
+  contract_id: string
+  mark: string
+  mark_kind: string
+  mode: string
+  reason: string | null
+}
+
 export function fetchAllContracts(): ReportContract[] {
   const db = getDatabase()
   const contractRows = db
@@ -100,6 +110,7 @@ function hydrateContract(row: ReportContractRow): ReportContract {
   const singleBindings = loadSingleValueBindings(row.id)
   const listBindings = loadListBindings(row.id)
   const parameterBindings = loadParameterDefinitions(row.id)
+  const skipBindings = loadMarkBindingOverrides(row.id)
 
   return {
     id: row.id,
@@ -109,7 +120,7 @@ function hydrateContract(row: ReportContractRow): ReportContract {
     templateFileName: row.template_file_name,
     templateChecksum: row.template_checksum,
     dataSources: dataSources.map(({ id, name }) => ({ id, name })),
-    bindings: [...singleBindings, ...listBindings, ...parameterBindings],
+    bindings: [...singleBindings, ...listBindings, ...parameterBindings, ...skipBindings],
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -211,6 +222,34 @@ function loadParameterDefinitions(contractId: string): ParameterDefinition[] {
   }))
 }
 
+function loadMarkBindingOverrides(contractId: string): DataBinding[] {
+  const db = getDatabase()
+  const rows = db
+    .prepare<[string], MarkBindingOverrideRow>(
+      `SELECT id, contract_id, mark, mark_kind, mode, reason
+       FROM mark_binding_overrides
+       WHERE contract_id = ?
+       ORDER BY mark ASC`
+    )
+    .all(contractId)
+
+  return rows
+    .filter((row) => row.mode === 'skip')
+    .map((row) => ({
+      type: 'skip',
+      mark: row.mark,
+      markKind: normalizeMarkKind(row.mark_kind),
+      reason: row.reason ?? undefined
+    }))
+}
+
+function normalizeMarkKind(kind: string): MarkType {
+  if (kind === 'single' || kind === 'list' || kind === 'parameter') {
+    return kind
+  }
+  return 'single'
+}
+
 export function createContract(payload: CreateContractPayload): ReportContract {
   const db = getDatabase()
   const contractId = payload.id ?? randomUUID()
@@ -272,6 +311,7 @@ export function updateContract(payload: UpdateContractPayload): ReportContract {
      )`
   )
   const deleteDataSourcesStmt = db.prepare('DELETE FROM data_sources WHERE contract_id = ?')
+  const deleteOverridesStmt = db.prepare('DELETE FROM mark_binding_overrides WHERE contract_id = ?')
 
   const transaction = db.transaction(() => {
     updateContractStmt.run({
@@ -288,6 +328,7 @@ export function updateContract(payload: UpdateContractPayload): ReportContract {
     deleteSingleStmt.run(payload.id)
     deleteListStmt.run(payload.id)
     deleteParameterStmt.run(payload.id)
+    deleteOverridesStmt.run(payload.id)
     deleteDataSourcesStmt.run(payload.id)
 
     insertRelatedEntities(db, payload.id, payload.dataSources, payload.bindings)
@@ -387,6 +428,18 @@ function insertRelatedEntities(
       (id, contract_id, mark, display_label, data_type, default_value)
      VALUES (@id, @contractId, @mark, @displayLabel, @dataType, @defaultValue)`
   )
+  const insertOverrideStmt = db.prepare<{
+    id: string
+    contractId: string
+    mark: string
+    markKind: string
+    mode: string
+    reason: string | null
+  }>(
+    `INSERT INTO mark_binding_overrides
+      (id, contract_id, mark, mark_kind, mode, reason)
+     VALUES (@id, @contractId, @mark, @markKind, @mode, @reason)`
+  )
 
   const dataSourceIdSet = new Set<string>()
   dataSources.forEach((ds, index) => {
@@ -453,6 +506,15 @@ function insertRelatedEntities(
         dataType: binding.dataType,
         defaultValue: binding.defaultValue ?? null
       })
+    } else if (binding.type === 'skip') {
+      insertOverrideStmt.run({
+        id: randomUUID(),
+        contractId,
+        mark: binding.mark,
+        markKind: binding.markKind,
+        mode: 'skip',
+        reason: binding.reason ?? null
+      })
     }
   })
 }
@@ -469,9 +531,10 @@ function parseColumns(json: string): string[] | undefined {
 function getContractTemplatePath(contractId: string): string | null {
   const db = getDatabase()
   const row = db
-    .prepare<[string], { template_path: string | null }>(
-      'SELECT template_path FROM report_contracts WHERE id = ?'
-    )
+    .prepare<
+      [string],
+      { template_path: string | null }
+    >('SELECT template_path FROM report_contracts WHERE id = ?')
     .get(contractId)
   return row?.template_path ?? null
 }

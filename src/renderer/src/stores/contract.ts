@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
-import type { ReportContract, DataSource, DataBinding, MarkItem } from '@shared/types/contract'
+import type {
+  ReportContract,
+  DataSource,
+  DataBinding,
+  MarkItem,
+  MarkType
+} from '@shared/types/contract'
 
 function createRandomId(prefix: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -110,9 +116,10 @@ export const useContractStore = defineStore('contract', () => {
     const bindings = cloneBindings(contract.bindings)
     const markItems = bindings.map<MarkItem>((binding) => ({
       mark: binding.mark,
-      markType: binding.type,
+      markType: binding.type === 'skip' ? binding.markKind : binding.type,
       configured: true,
-      displayText: getBindingDisplayText(binding, dataSources)
+      displayText: getBindingDisplayText(binding, dataSources),
+      resolutionType: binding.type === 'skip' ? 'skip' : 'binding'
     }))
 
     contractDraft.value = {
@@ -138,6 +145,25 @@ export const useContractStore = defineStore('contract', () => {
     }
 
     refreshMarkDisplay(binding)
+  }
+
+  function markBindingAsSkipped(mark: string, markKind: MarkType, reason?: string) {
+    const normalizedReason = reason && reason.trim().length > 0 ? reason.trim() : undefined
+    updateDraftBinding({
+      type: 'skip',
+      mark,
+      markKind,
+      reason: normalizedReason
+    })
+  }
+
+  function removeDraftBinding(mark: string) {
+    if (!contractDraft.value) return
+    const index = contractDraft.value.bindings.findIndex((b) => b.mark === mark)
+    if (index !== -1) {
+      contractDraft.value.bindings.splice(index, 1)
+    }
+    resetMarkDisplay(mark)
   }
 
   function addDataSource(name: string) {
@@ -268,6 +294,8 @@ export const useContractStore = defineStore('contract', () => {
       return `[${dsName}]!${binding.sheetName}!(R${binding.headerRow}:...; R${binding.dataStartRow})`
     } else if (binding.type === 'parameter') {
       return `[参数：${binding.displayLabel}]`
+    } else if (binding.type === 'skip') {
+      return `【无需配置】${binding.reason ?? 'Carbone 模板公式自动生成'}`
     }
     return ''
   }
@@ -288,6 +316,13 @@ export const useContractStore = defineStore('contract', () => {
     if (markItem) {
       markItem.configured = true
       markItem.displayText = getBindingDisplayText(binding)
+      if (binding.type === 'skip') {
+        markItem.markType = binding.markKind
+        markItem.resolutionType = 'skip'
+      } else {
+        markItem.markType = binding.type
+        markItem.resolutionType = 'binding'
+      }
     }
   }
 
@@ -296,8 +331,18 @@ export const useContractStore = defineStore('contract', () => {
     contractDraft.value.bindings.forEach((binding) => refreshMarkDisplay(binding))
   }
 
+  function resetMarkDisplay(mark: string) {
+    if (!contractDraft.value) return
+    const markItem = contractDraft.value.markItems.find((m) => m.mark === mark)
+    if (markItem) {
+      markItem.configured = false
+      markItem.displayText = ''
+      markItem.resolutionType = undefined
+    }
+  }
+
   function cloneBinding(binding: DataBinding): DataBinding {
-    if (binding.type === 'single' || binding.type === 'parameter') {
+    if (binding.type === 'single' || binding.type === 'parameter' || binding.type === 'skip') {
       return { ...binding }
     }
     return {
@@ -352,6 +397,8 @@ export const useContractStore = defineStore('contract', () => {
     createNewDraft,
     loadDraftFromContract,
     updateDraftBinding,
+    markBindingAsSkipped,
+    removeDraftBinding,
     addDataSource,
     renameDataSource,
     saveContract,

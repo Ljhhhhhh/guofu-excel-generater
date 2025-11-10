@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useContractStore } from '../../stores/contract'
@@ -26,14 +26,22 @@ const { contractDraft: draft } = storeToRefs(contractStore)
 const selectedMark = ref<MarkItem | null>(null)
 const editingDataSourceId = ref<string | null>(null)
 const newDataSourceName = ref('')
+const selectedBinding = computed<DataBinding | null>(() => {
+  if (!draft.value || !selectedMark.value) return null
+  return draft.value.bindings.find((b) => b.mark === selectedMark.value?.mark) ?? null
+})
+const isSelectedMarkSkipped = computed(() => selectedBinding.value?.type === 'skip')
+const canSkipSelectedMark = computed(
+  () => selectedMark.value !== null && selectedMark.value.markType !== 'parameter'
+)
 
-// 数据标记列表
+// 数据标记
 const dataMarks = computed(() => {
   if (!draft.value) return []
   return draft.value.markItems.filter((m) => m.markType === 'single' || m.markType === 'list')
 })
 
-// 参数标记列表
+// 参数标记
 const parameterMarks = computed(() => {
   if (!draft.value) return []
   return draft.value.markItems.filter((m) => m.markType === 'parameter')
@@ -44,14 +52,14 @@ const selectMark = (mark: MarkItem) => {
   selectedMark.value = mark
 }
 
-// 保存配置（只保存到内存中的 store）
+// 保存绑定
 const handleSaveBinding = (binding: DataBinding) => {
   // 保存到内存中的 contractDraft
   contractStore.updateDraftBinding(binding)
-  // 保存后清除选择
+  // 保存后清空选中的标记
   selectedMark.value = null
   // 可以添加成功提示
-  console.log('配置已保存到内存:', binding.mark)
+  console.log('保存绑定:', binding.mark)
 }
 
 // 添加数据源
@@ -62,7 +70,7 @@ const handleAddDataSource = () => {
   }
 }
 
-// 开始编辑数据源名称
+// 开始编辑数据源
 const startEditDataSource = (id: string) => {
   editingDataSourceId.value = id
   const ds = draft.value?.dataSources.find((d) => d.id === id)
@@ -80,10 +88,24 @@ const saveDataSourceName = () => {
   }
 }
 
-// 取消编辑
+// 取消编辑数据源
 const cancelEditDataSource = () => {
   editingDataSourceId.value = null
   newDataSourceName.value = ''
+}
+
+const handleMarkAsSkipped = () => {
+  if (!selectedMark.value || !canSkipSelectedMark.value) return
+  const confirmed = confirm('确认该模板标记无需配置数据源吗？')
+  if (!confirmed) return
+  contractStore.markBindingAsSkipped(selectedMark.value.mark, selectedMark.value.markType)
+}
+
+const handleResumeConfiguration = () => {
+  if (!selectedMark.value) return
+  const confirmed = confirm('恢复为需要配置后需重新绑定数据源，确定继续吗？')
+  if (!confirmed) return
+  contractStore.removeDraftBinding(selectedMark.value.mark)
 }
 </script>
 
@@ -93,7 +115,7 @@ const cancelEditDataSource = () => {
     <div class="lg:col-span-1">
       <Card title="待配置清单" :padding="false">
         <div class="p-4">
-          <p class="text-sm text-gray-600 mb-4">模板中的所有标记都在这里，请逐项完成配置。</p>
+          <p class="text-sm text-gray-600 mb-4">数据标记和参数标记需要配置数据源。</p>
 
           <!-- 数据标记 -->
           <div v-if="dataMarks.length > 0" class="mb-6">
@@ -108,7 +130,9 @@ const cancelEditDataSource = () => {
                   selectedMark?.mark === mark.mark
                     ? 'border-blue-500 bg-blue-50'
                     : mark.configured
-                      ? 'border-green-300 bg-green-50 hover:bg-green-100'
+                      ? mark.resolutionType === 'skip'
+                        ? 'border-amber-300 bg-amber-50 hover:bg-amber-100'
+                        : 'border-green-300 bg-green-50 hover:bg-green-100'
                       : 'border-gray-300 bg-white hover:bg-gray-50'
                 ]"
                 @click="selectMark(mark)"
@@ -122,7 +146,10 @@ const cancelEditDataSource = () => {
                   </div>
                   <svg
                     v-if="mark.configured"
-                    class="w-5 h-5 text-green-600 shrink-0 ml-2"
+                    :class="[
+                      'w-5 h-5 shrink-0 ml-2',
+                      mark.resolutionType === 'skip' ? 'text-amber-600' : 'text-green-600'
+                    ]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -152,7 +179,9 @@ const cancelEditDataSource = () => {
                   selectedMark?.mark === mark.mark
                     ? 'border-blue-500 bg-blue-50'
                     : mark.configured
-                      ? 'border-green-300 bg-green-50 hover:bg-green-100'
+                      ? mark.resolutionType === 'skip'
+                        ? 'border-amber-300 bg-amber-50 hover:bg-amber-100'
+                        : 'border-green-300 bg-green-50 hover:bg-green-100'
                       : 'border-gray-300 bg-white hover:bg-gray-50'
                 ]"
                 @click="selectMark(mark)"
@@ -166,7 +195,10 @@ const cancelEditDataSource = () => {
                   </div>
                   <svg
                     v-if="mark.configured"
-                    class="w-5 h-5 text-green-600 shrink-0 ml-2"
+                    :class="[
+                      'w-5 h-5 shrink-0 ml-2',
+                      mark.resolutionType === 'skip' ? 'text-amber-600' : 'text-green-600'
+                    ]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -185,18 +217,18 @@ const cancelEditDataSource = () => {
         </div>
       </Card>
 
-      <!-- 导航按钮 -->
+      <!-- 右侧：配置面板 -->
       <div class="mt-6 flex gap-3">
-        <Button variant="outline" class="flex-1" @click="emit('prev')"> 上一步 </Button>
+        <Button variant="outline" class="flex-1" @click="emit('prev')"> 上一步</Button>
         <Button variant="primary" class="flex-1" :disabled="!canProceed" @click="emit('next')">
           下一步
         </Button>
       </div>
     </div>
 
-    <!-- 右侧 -->
+    <!-- 右侧：数据源管理 -->
     <div class="lg:col-span-2 space-y-6">
-      <!-- 右侧区域 A：数据源管理 -->
+      <!-- 数据源管理 -->
       <Card title="数据源管理" :padding="false">
         <div class="p-4">
           <p class="text-sm text-gray-600 mb-4">声明此契约需要几个数据源。</p>
@@ -247,11 +279,11 @@ const cancelEditDataSource = () => {
             <input
               v-model="newDataSourceName"
               type="text"
-              placeholder="新数据源名称"
+              placeholder="数据源名称"
               class="flex-1 px-3 py-2 border border-gray-300 rounded-md"
               @keyup.enter="handleAddDataSource"
             />
-            <Button variant="primary" @click="handleAddDataSource"> 添加数据源 </Button>
+            <Button variant="primary" @click="handleAddDataSource"> 添加数据源</Button>
           </div>
         </div>
       </Card>
@@ -274,20 +306,62 @@ const cancelEditDataSource = () => {
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p class="mt-2 text-sm text-gray-600">请从左侧选择一个标记开始配置</p>
+            <p class="mt-2 text-sm text-gray-600">请选择一个数据标记进行配置。</p>
           </div>
 
-          <!-- 配置单个值 -->
+          <div
+            v-if="selectedMark && canSkipSelectedMark"
+            class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4"
+          >
+            <p class="text-sm text-amber-800">
+              这是一个 Carbone 数据标记，无需配置数据源，直接使用数据源进行计算。
+            </p>
+            <p
+              v-if="
+                isSelectedMarkSkipped && selectedBinding?.type === 'skip' && selectedBinding.reason
+              "
+              class="mt-2 rounded bg-white/70 px-3 py-2 text-xs text-amber-700"
+            >
+              当前标记：{{ selectedBinding.mark }}，无需配置数据源，直接使用数据源进行计算。
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <Button
+                v-if="isSelectedMarkSkipped"
+                variant="outline"
+                class="border-amber-400 text-amber-700 hover:bg-white"
+                @click="handleResumeConfiguration"
+              >
+                恢复为需要配置
+              </Button>
+              <Button
+                v-else
+                variant="secondary"
+                class="border-amber-500 bg-amber-100 text-amber-800 hover:bg-amber-200"
+                @click="handleMarkAsSkipped"
+              >
+                标记为无需配置
+              </Button>
+            </div>
+          </div>
+
+          <div
+            v-if="selectedMark && isSelectedMarkSkipped"
+            class="rounded-lg border border-dashed border-amber-200 bg-amber-50 py-10 text-center text-sm text-amber-700"
+          >
+            当前标记：{{ selectedBinding?.mark }}，无需配置数据源，直接使用数据源进行计算。
+          </div>
+
+          <!-- 配置单值数据 -->
           <ConfigSingleValue
-            v-if="selectedMark && selectedMark.markType === 'single'"
+            v-if="selectedMark && !isSelectedMarkSkipped && selectedMark.markType === 'single'"
             :mark="selectedMark.mark"
             :data-sources="draft.dataSources"
             @save="handleSaveBinding"
           />
 
-          <!-- 配置列表 -->
+          <!-- 配置列表数据 -->
           <ConfigList
-            v-if="selectedMark && selectedMark.markType === 'list'"
+            v-if="selectedMark && !isSelectedMarkSkipped && selectedMark.markType === 'list'"
             :mark="selectedMark.mark"
             :data-sources="draft.dataSources"
             @save="handleSaveBinding"

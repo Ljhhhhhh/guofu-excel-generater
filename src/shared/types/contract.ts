@@ -42,13 +42,21 @@ export interface ParameterDefinition {
 }
 
 // 数据源
+// Carbone 标记无需配置声明
+export interface SkipBinding {
+  type: 'skip'
+  mark: string
+  markKind: MarkType
+  reason?: string
+}
+
 export interface DataSource {
   id: string
   name: string // 例如: "Source 1", "销售数据"
 }
 
 // 数据绑定联合类型
-export type DataBinding = SingleValueBinding | ListBinding | ParameterDefinition
+export type DataBinding = SingleValueBinding | ListBinding | ParameterDefinition | SkipBinding
 
 // 标记项(用于左侧清单显示)
 export interface MarkItem {
@@ -56,6 +64,7 @@ export interface MarkItem {
   markType: MarkType
   configured: boolean // 是否已配置
   displayText: string // 显示文本(已配置时显示配置摘要)
+  resolutionType?: MarkResolutionType
 }
 
 // 报表契约

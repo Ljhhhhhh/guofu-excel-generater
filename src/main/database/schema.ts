@@ -73,11 +73,24 @@ const CREATE_PARAMETER_DEFINITIONS = `
   )
 `
 
+const CREATE_MARK_BINDING_OVERRIDES = `
+  CREATE TABLE IF NOT EXISTS mark_binding_overrides (
+    id TEXT PRIMARY KEY,
+    contract_id TEXT NOT NULL REFERENCES report_contracts(id) ON DELETE CASCADE,
+    mark TEXT NOT NULL,
+    mark_kind TEXT NOT NULL CHECK(mark_kind IN ('single', 'list', 'parameter')),
+    mode TEXT NOT NULL CHECK(mode IN ('skip')),
+    reason TEXT,
+    UNIQUE(contract_id, mark)
+  )
+`
+
 const CREATE_INDEXES = [
   `CREATE INDEX IF NOT EXISTS idx_data_sources_contract ON data_sources(contract_id)`,
   `CREATE INDEX IF NOT EXISTS idx_single_value_contract ON single_value_bindings(contract_id)`,
   `CREATE INDEX IF NOT EXISTS idx_list_bindings_contract ON list_bindings(contract_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_parameter_contract ON parameter_definitions(contract_id)`
+  `CREATE INDEX IF NOT EXISTS idx_parameter_contract ON parameter_definitions(contract_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_mark_override_contract ON mark_binding_overrides(contract_id)`
 ]
 
 export function ensureSchema(db: Database.Database): void {
@@ -88,6 +101,7 @@ export function ensureSchema(db: Database.Database): void {
     CREATE_LIST_BINDINGS,
     CREATE_LIST_FIELD_MAPPINGS,
     CREATE_PARAMETER_DEFINITIONS,
+    CREATE_MARK_BINDING_OVERRIDES,
     ...CREATE_INDEXES
   ]
 
@@ -107,9 +121,7 @@ function ensureColumnExists(
   columnName: string,
   columnDefinition: string
 ): void {
-  const columns = db
-    .prepare<unknown[], { name: string }>(`PRAGMA table_info(${tableName})`)
-    .all()
+  const columns = db.prepare<unknown[], { name: string }>(`PRAGMA table_info(${tableName})`).all()
 
   if (!columns.some((column) => column.name === columnName)) {
     db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`).run()

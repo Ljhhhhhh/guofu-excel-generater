@@ -42,7 +42,11 @@ class ReportRunLogger {
     this.push('error', message, context)
   }
 
-  private push(level: ReportRunLogEntry['level'], message: string, context?: Record<string, unknown>) {
+  private push(
+    level: ReportRunLogEntry['level'],
+    message: string,
+    context?: Record<string, unknown>
+  ) {
     this.entries.push({
       level,
       message,
@@ -84,10 +88,7 @@ export async function runContractReport(options: ReportRunOptions): Promise<Repo
       code: 'CONTRACT_NOT_FOUND'
     })
   }
-  return executeReport(
-    mapToExecutionContext(contract),
-    options
-  )
+  return executeReport(mapToExecutionContext(contract), options)
 }
 
 export async function testContractDraft(payload: ContractTestPayload): Promise<ReportRunResult> {
@@ -246,6 +247,13 @@ async function buildDataset(
   const datasetRoot: Record<string, unknown> = {}
 
   for (const binding of contract.bindings) {
+    if (binding.type === 'skip') {
+      logger.info('跳过无需配置的模板标记', {
+        mark: binding.mark
+      })
+      continue
+    }
+
     if (binding.type === 'single') {
       const extractor = await getExtractor(binding.dataSource)
       const result = extractor.extractSingleValue(binding)
@@ -393,7 +401,9 @@ function transformListResult(result: ListExtractionResult): Record<string, unkno
   return buildRowsFromColumnResult(result)
 }
 
-function buildRowObjectFromFieldMap(values: Record<string, CellPrimitive>): Record<string, unknown> {
+function buildRowObjectFromFieldMap(
+  values: Record<string, CellPrimitive>
+): Record<string, unknown> {
   const row: Record<string, unknown> = {}
   Object.entries(values).forEach(([fieldName, cellValue]) => {
     if (!fieldName) return
@@ -404,7 +414,9 @@ function buildRowObjectFromFieldMap(values: Record<string, CellPrimitive>): Reco
   return row
 }
 
-function buildRowObjectFromFixedRow(row: FixedListExtractionResult['rows'][number]): Record<string, unknown> {
+function buildRowObjectFromFixedRow(
+  row: FixedListExtractionResult['rows'][number]
+): Record<string, unknown> {
   const result: Record<string, unknown> = {}
   row.values.forEach((cell) => {
     const path = resolveFieldPath(cell.fieldName, cell.headerText, cell.column)
